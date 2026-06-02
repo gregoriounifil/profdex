@@ -1,236 +1,282 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import ProfCard from '../components/ProfCard.vue'
 import { useAuthStore } from '../stores/auth'
-import { useProfessorsStore } from '../stores/professors'
 
 const router = useRouter()
 const auth = useAuthStore()
-const store = useProfessorsStore()
 
-onMounted(() => store.fetch())
+const trainerName = ref('Teste')
+const capturedCount = ref(0)
+const totalCount = ref(0)
 
-const captured = computed(() => store.professors.filter((p) => p.captured).length)
-const total = computed(() => store.professors.length)
+async function handleLogout() {
+  try {
+    if (typeof auth.logout === 'function') {
+      await auth.logout()
+    } else {
+      auth.isAuthenticated = false
+      auth.user = null
+    }
+  } catch (error) {
+    console.error('Erro ao deslogar:', error)
+  } finally {
+    router.push({ name: 'login' })
+  }
+}
 </script>
 
 <template>
-  <div class="profdex">
-    <header class="profdex__header">
-      <div class="header__top">
-        <h1 class="pixel header__title">PROF<span>DEX</span></h1>
-        <button class="logout-btn" @click="auth.logout(); router.push({ name: 'home' })">
-          Sair
-        </button>
+  <div class="profdex-dashboard pk-pixel">
+    <header class="dashboard-header">
+      <div class="header-main-info">
+        <h1 class="header-title">PROF<span>DEX</span></h1>
+        <button class="btn-sair-retro" @click="handleLogout">Sair</button>
       </div>
-
-      <div class="header__trainer">
-        <span class="pixel" style="font-size: 8px; color: rgba(255,255,255,0.7)">TREINADOR</span>
-        <span class="trainer-name">{{ auth.user?.name }}</span>
-      </div>
-
-      <div class="header__progress">
-        <div class="progress-text pixel">
-          {{ captured }}<span>/{{ total }}</span> capturados
+      
+      <div class="trainer-status-bar">
+        <div class="trainer-label-group">
+          <span class="label-mini">TREINADOR</span>
+          <span class="trainer-name">{{ trainerName }}</span>
         </div>
-        <div class="progress-bar">
-          <div
-            class="progress-fill"
-            :style="{ width: total ? `${(captured / total) * 100}%` : '0%' }"
-          />
+        <div class="captured-score">
+          {{ capturedCount }}/{{ totalCount }} <span class="label-mini-inline">capturados</span>
         </div>
       </div>
+      <div class="header-divider-line" />
     </header>
 
-    <main class="profdex__main page">
-      <div v-if="store.loading" class="loading-state">
-        <div class="spinner-lg" />
-        <span class="pixel" style="font-size: 8px">Carregando...</span>
-      </div>
-
-      <div v-else class="grid">
-        <ProfCard
-          v-for="(prof, i) in store.professors"
-          :key="prof.id"
-          :professor="prof"
-          :index="i"
-        />
+    <main class="dashboard-body">
+      <div class="inner-content">
+        <p class="empty-text">Nenhum professor encontrado</p>
       </div>
     </main>
 
-    <nav class="profdex__nav">
-      <button class="nav-btn nav-btn--active" @click="router.push({ name: 'profdex' })">
-        <span class="nav-icon">📒</span>
-        <span class="pixel nav-label">ProfDex</span>
-      </button>
-      <button class="nav-btn nav-btn--primary" @click="router.push({ name: 'scan' })">
-        <span class="nav-icon">📷</span>
-        <span class="pixel nav-label">Scanear</span>
-      </button>
-      <button class="nav-btn" @click="router.push({ name: 'capture' })">
-        <span class="nav-icon">✨</span>
-        <span class="pixel nav-label">Capturar</span>
-      </button>
+    <nav class="bottom-navbar">
+      <div class="navbar-container">
+        <button class="ds-btn btn-yellow" @click="router.push({ name: 'profdex' })">
+          <span class="ds-btn-icon">📒</span>
+          <span class="ds-btn-text">PROFDEX</span>
+        </button>
+
+        <button class="ds-btn btn-blue active" @click="router.push({ name: 'capture' })">
+          <span class="ds-btn-icon">📷</span>
+          <span class="ds-btn-text">SCANNER</span>
+        </button>
+
+        <button class="ds-btn btn-green" @click="router.push({ name: 'capture' })">
+          <span class="ds-btn-icon">✨</span>
+          <span class="ds-btn-text">CAPTURA</span>
+        </button>
+      </div>
     </nav>
   </div>
 </template>
 
 <style scoped>
-.profdex {
-  height: 100%;
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+.pk-pixel {
+  font-family: 'Press Start 2P', monospace !important;
+}
+
+.profdex-dashboard {
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: #cc0000;
+  overflow: hidden;
 }
 
-.profdex__header {
-  background: linear-gradient(160deg, var(--red-dark), var(--red));
-  padding: 16px 20px 28px;
-  position: relative;
+.dashboard-header {
+  background: #cc0000;
+  padding: 48px 16px 12px;
+  display: flex;
+  flex-direction: column;
   flex-shrink: 0;
+  position: relative;
 }
 
-.profdex__header::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0; right: 0;
-  height: 20px;
-  background: var(--bg);
-  border-radius: 20px 20px 0 0;
-}
-
-.header__top {
+.header-main-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
-.header__title {
-  font-size: 20px;
+.header-title {
+  font-size: 22px;
   color: white;
-  text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+  margin: 0;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 0px #222222;
 }
 
-.header__title span {
-  color: var(--yellow);
+.header-title span {
+  color: #f8d030;
 }
 
-.logout-btn {
-  background: rgba(0,0,0,0.25);
-  color: rgba(255,255,255,0.8);
-  border: 1px solid rgba(255,255,255,0.2);
+.btn-sair-retro {
+  background: #a81808;
+  border: 2px solid #222222;
+  box-shadow: inset -2px -2px 0px #701008, inset 2px 2px 0px #d82810;
+  color: white;
+  padding: 6px 16px;
   border-radius: 20px;
-  padding: 6px 14px;
-  font-size: 12px;
+  font-size: 10px;
+  font-family: 'Press Start 2P', monospace;
+  cursor: pointer;
 }
 
-.header__trainer {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: 14px;
-}
-
-.trainer-name {
-  font-size: 16px;
-  font-weight: 700;
-  color: white;
-}
-
-.header__progress {
+.trainer-status-bar {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.progress-text {
-  font-size: 9px;
-  color: rgba(255,255,255,0.9);
+.label-mini {
+  display: block;
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 2px;
 }
 
-.progress-text span {
-  color: rgba(255,255,255,0.5);
+.label-mini-inline {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.9);
 }
 
-.progress-bar {
+.trainer-name {
+  font-size: 14px;
+  color: white;
+  font-weight: bold;
+}
+
+.captured-score {
+  font-size: 12px;
+  color: white;
+}
+
+.header-divider-line {
   height: 6px;
-  background: rgba(0,0,0,0.3);
-  border-radius: 3px;
-  overflow: hidden;
+  background: #222222;
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  right: 0;
+  z-index: 2;
 }
 
-.progress-fill {
-  height: 100%;
-  background: var(--yellow);
-  border-radius: 3px;
-  transition: width 0.5s ease;
-}
-
-.profdex__main {
+.dashboard-body {
   flex: 1;
-  padding: 20px 16px;
+  background: #181c24;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  margin-top: 6px;
+  padding: 24px 16px 100px;
   overflow-y: auto;
+  z-index: 1;
 }
 
-.loading-state {
+.inner-content {
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 16px;
-  padding: 40px 0;
+  height: 60%;
 }
 
-.spinner-lg {
-  width: 36px;
-  height: 36px;
-  border: 3px solid var(--border);
-  border-top-color: var(--red);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+.empty-text {
+  font-size: 10px;
+  color: #a8b8c0;
+  text-align: center;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
-.profdex__nav {
-  background: var(--bg-card);
-  border-top: 1px solid var(--border);
+.bottom-navbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 84px;
+  background: #181c24;
+ 
   display: flex;
-  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
-  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  padding: 0 10px;
 }
 
-.nav-btn {
+.navbar-container {
+  display: flex;
+  width: 100%;
+  max-width: 480px;
+  gap: 8px;
+}
+
+.ds-btn {
   flex: 1;
+  height: 52px;
+  border: 3px solid #1a1a1a;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  background: transparent;
-  color: var(--text-muted);
-  padding: 8px 4px;
-  border-radius: var(--radius);
-  transition: color 0.15s;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
 }
 
-.nav-btn--active {
-  color: var(--yellow);
+.ds-btn-icon {
+  font-size: 14px;
 }
 
-.nav-btn--primary {
-  color: var(--red-light);
+.ds-btn-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 1px 1px 0px #1a1a1a;
 }
 
-.nav-icon {
-  font-size: 22px;
+.btn-yellow {
+  background: #cba034;
+  box-shadow: 
+    inset 0 3px 0 #ffdf6d,
+    inset 0 -4px 0 #896712,
+    0 4px 0 #1a1a1a;
+}
+.btn-yellow:active {
+  transform: translateY(3px);
+  box-shadow: inset 0 3px 0 #ffdf6d, inset 0 -4px 0 #896712, 0 1px 0 #1a1a1a;
 }
 
-.nav-label {
-  font-size: 7px;
+.btn-blue {
+  background: #3c7fa1;
+  box-shadow: 
+    inset 0 3px 0 #7ec5e6, 
+    inset 0 -4px 0 #1e4d66, 
+    0 4px 0 #1a1a1a;
+}
+.btn-blue:active {
+  transform: translateY(3px);
+  box-shadow: inset 0 3px 0 #7ec5e6, inset 0 -4px 0 #1e4d66, 0 1px 0 #1a1a1a;
+}
+
+.btn-green {
+  background: #549942;
+  box-shadow: 
+    inset 0 3px 0 #9ae186, 
+    inset 0 -4px 0 #2e6221, 
+    0 4px 0 #1a1a1a;
+}
+.btn-green:active {
+  transform: translateY(3px);
+  box-shadow: inset 0 3px 0 #9ae186, inset 0 -4px 0 #2e6221, 0 1px 0 #1a1a1a;
+}
+
+.ds-btn.active {
+  filter: brightness(1.05);
 }
 </style>

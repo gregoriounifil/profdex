@@ -15,6 +15,14 @@ const capturing = ref(false)
 const celebrating = ref(false)
 const celebrateImgError = ref(false)
 
+// Mapeamento para limpar a câmera e liberar o hardware ao sair da tela
+function goBack() {
+  if (containerRef.value) {
+    containerRef.value.innerHTML = ''
+  }
+  router.push({ name: 'profdex' })
+}
+
 // Pares [marker1Index, marker2Index] — Mário(0,4), Eron(1,5), Gustavo(2,3)
 const MARKER_PAIRS = [
   [0, 4],
@@ -28,7 +36,7 @@ onMounted(async () => {
 
   const visibleSet = new Set()
 
-  MARKER_PAIRS.forEach(([m1, m2], pairIndex) => {
+  MARKER_PAIRS.forEach(([m1, m2]) => {
     const anchor1 = addAnchor(m1)
     const anchor2 = addAnchor(m2)
 
@@ -66,17 +74,17 @@ async function triggerCapture(professor) {
 }
 
 function finish() {
-  router.push({ name: 'profdex' })
+  goBack()
 }
 </script>
 
 <template>
-  <div class="capture-view" :class="{ 'flash': celebrating }">
+  <div class="capture-view pk-pixel" :class="{ 'flash': celebrating }">
     <div ref="arContainer" class="ar-container" />
 
     <div class="capture-ui">
       <div class="capture-topbar">
-        <button class="back-btn" @click="router.push({ name: 'profdex' })">← Voltar</button>
+        <button class="btn-voltar-retro" @click="goBack">Voltar</button>
         <span class="pixel capture-title">CAPTURA AR</span>
       </div>
 
@@ -95,8 +103,8 @@ function finish() {
         <div class="error-card">
           <span style="font-size: 32px">😕</span>
           <p class="pixel" style="font-size: 10px">Erro ao iniciar AR</p>
-          <button class="btn btn-primary" style="pointer-events: auto" @click="router.push({ name: 'profdex' })">
-            <span class="pixel">VOLTAR</span>
+          <button class="btn-voltar-retro" style="pointer-events: auto; position: static;" @click="goBack">
+            VOLTAR
           </button>
         </div>
       </div>
@@ -131,8 +139,8 @@ function finish() {
               <div class="pb-mid" />
               <div class="pb-bot" />
             </div>
-            <p class="pixel" style="font-size: 10px; color: var(--yellow)">CAPTURANDO!</p>
-            <p style="font-size: 12px; color: var(--text-muted)">Prof. {{ capturedProfessor.name }}</p>
+            <p class="pixel" style="font-size: 10px; color: #f8d030">CAPTURANDO!</p>
+            <p style="font-size: 12px; color: #a8b8c0">Prof. {{ capturedProfessor.name }}</p>
           </div>
         </div>
 
@@ -151,7 +159,7 @@ function finish() {
               <div v-else class="celebrate-fallback">{{ capturedProfessor.name[0] }}</div>
             </div>
             <div class="celebrate-prof-name">Prof. {{ capturedProfessor.name }}</div>
-            <p style="font-size: 13px; color: var(--text-muted); text-align: center; line-height: 1.6">
+            <p style="font-size: 13px; color: #a8b8c0; text-align: center; line-height: 1.6">
               O Prof. <strong>{{ capturedProfessor.name }}</strong> foi adicionado ao seu ProfDex!
             </p>
             <button class="btn btn-primary celebrate-btn" @click="finish">
@@ -165,6 +173,12 @@ function finish() {
 </template>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+.pk-pixel {
+  font-family: 'Press Start 2P', monospace !important;
+}
+
 .capture-view {
   position: fixed;
   inset: 0;
@@ -200,22 +214,33 @@ function finish() {
   flex-shrink: 0;
 }
 
-.back-btn {
+/* ==========================================================================
+   ESTILO DO NOVO BOTÃO RETRÔ (PULSE / RELEVO 3D ORIGINAL DO BOTÃO SAIR)
+   ========================================================================== */
+.btn-voltar-retro {
   position: absolute;
   left: 20px;
+  background: #a81808;
+  border: 2px solid #222222;
+  box-shadow: inset -2px -2px 0px #701008, inset 2px 2px 0px #d82810;
   color: white;
-  background: rgba(0,0,0,0.5);
-  border: 1px solid rgba(255,255,255,0.2);
+  padding: 6px 16px;
   border-radius: 20px;
-  padding: 8px 14px;
-  font-size: 13px;
+  font-size: 10px;
+  font-family: 'Press Start 2P', monospace;
+  cursor: pointer;
   pointer-events: auto;
+}
+
+.btn-voltar-retro:active {
+  transform: scale(0.95);
+  box-shadow: inset 2px 2px 0px #701008, inset -2px -2px 0px #d82810;
 }
 
 .capture-title {
   font-size: 12px;
   color: white;
-  text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+  text-shadow: 2px 2px 0px #222222;
 }
 
 .capture-loading, .capture-error {
@@ -246,22 +271,22 @@ function finish() {
   width: 72px;
   height: 72px;
   animation: spin 0.5s linear infinite;
-  border-color: var(--yellow);
+  border-color: #f8d030;
 }
 
-.pb-top { height: 50%; background: var(--red); }
+.pb-top { height: 50%; background: #cc0000; }
 .pb-mid { height: 8px; background: #222; }
 .pb-bot { height: calc(50% - 8px); background: white; }
 
 .error-card {
   background: rgba(0,0,0,0.88);
-  border: 1px solid var(--red);
-  border-radius: var(--radius-lg);
+  border: 2px solid #cc0000;
+  border-radius: 12px;
   padding: 28px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   text-align: center;
   pointer-events: auto;
   width: 100%;
@@ -276,8 +301,8 @@ function finish() {
 
 .hint-content {
   background: rgba(8, 8, 24, 0.92);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
   padding: 24px 20px;
   width: 100%;
   display: flex;
@@ -292,14 +317,14 @@ function finish() {
 
 .hint-title {
   font-size: 9px;
-  color: var(--yellow);
+  color: #f8d030;
   text-align: center;
   letter-spacing: 0.5px;
 }
 
 .hint-subtitle {
   font-size: 13px;
-  color: var(--text-muted);
+  color: #a8b8c0;
   text-align: center;
   line-height: 1.6;
 }
@@ -325,13 +350,13 @@ function finish() {
 .marker-frame {
   width: 56px;
   height: 56px;
-  border: 2px dashed var(--yellow);
+  border: 2px dashed #f8d030;
   border-radius: 6px;
   animation: pulse 2s ease-in-out infinite;
 }
 
 .marker-frame--card {
-  border-color: var(--red-light);
+  border-color: #ff7070;
   animation-delay: 0.5s;
 }
 
@@ -364,8 +389,8 @@ function finish() {
 
 .celebrate-card {
   background: rgba(8, 8, 24, 0.97);
-  border: 2px solid var(--yellow);
-  border-radius: var(--radius-lg);
+  border: 2px solid #f8d030;
+  border-radius: 12px;
   padding: 28px 20px;
   width: 100%;
   display: flex;
@@ -382,7 +407,7 @@ function finish() {
 
 .celebrate-title {
   font-size: 18px;
-  color: var(--yellow);
+  color: #f8d030;
   text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
   letter-spacing: 2px;
 }
@@ -398,7 +423,7 @@ function finish() {
   height: 96px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid var(--yellow);
+  border: 3px solid #f8d030;
   box-shadow: 0 0 24px rgba(255, 222, 0, 0.4);
   animation: pulse 1s ease-in-out infinite;
 }
@@ -407,14 +432,14 @@ function finish() {
   width: 96px;
   height: 96px;
   border-radius: 50%;
-  background: var(--red);
+  background: #cc0000;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 42px;
   font-weight: 900;
   color: white;
-  border: 3px solid var(--yellow);
+  border: 3px solid #f8d030;
   animation: pulse 1s ease-in-out infinite;
 }
 
@@ -426,5 +451,20 @@ function finish() {
 .celebrate-btn {
   pointer-events: auto;
   margin-top: 4px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+
+@keyframes captureFlash {
+  0% { background: white; }
+  100% { background: black; }
 }
 </style>

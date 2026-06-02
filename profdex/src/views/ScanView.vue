@@ -14,8 +14,15 @@ const foundProfessor = ref(null)
 const discovering = ref(false)
 const avatarError = ref(false)
 
-// marker1Index por professor: Mário=0, Eron=2, Gustavo=4
-// Mário=0, Eron=1, Gustavo=2
+// Mapeamento correto para liberar a câmera ao voltar
+function goBack() {
+  if (containerRef.value) {
+    containerRef.value.innerHTML = ''
+  }
+  router.push({ name: 'profdex' })
+}
+
+// marker1Index por professor: Mário=0, Eron=1, Gustavo=2
 const FIRST_MARKER_INDICES = [0, 1, 2]
 
 onMounted(async () => {
@@ -55,12 +62,12 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="scan-view">
+  <div class="scan-view pk-pixel">
     <div ref="arContainer" class="ar-container" />
 
     <div class="scan-ui">
       <div class="scan-topbar">
-        <button class="back-btn" @click="router.push({ name: 'profdex' })">← Voltar</button>
+        <button class="btn-voltar-retro" @click="goBack">Voltar</button>
         <span class="pixel scan-title">SCANNER</span>
       </div>
 
@@ -79,8 +86,8 @@ onMounted(async () => {
           <span style="font-size: 32px">😕</span>
           <p class="pixel" style="font-size: 10px">Erro ao iniciar AR</p>
           <p style="font-size: 12px; color: var(--text-muted)">{{ error }}</p>
-          <button class="btn btn-primary" style="pointer-events: auto" @click="router.push({ name: 'profdex' })">
-            <span class="pixel">VOLTAR</span>
+          <button class="btn-voltar-retro" style="pointer-events: auto" @click="goBack">
+            VOLTAR
           </button>
         </div>
       </div>
@@ -116,6 +123,7 @@ onMounted(async () => {
             </div>
 
             <div v-if="discovering" class="spinner-sm" />
+            
             <template v-else>
               <h2 class="found-name">Prof. {{ foundProfessor.name }}</h2>
               <p class="found-desc">
@@ -138,6 +146,12 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+.pk-pixel {
+  font-family: 'Press Start 2P', monospace !important;
+}
+
 .scan-view {
   position: fixed;
   inset: 0;
@@ -169,22 +183,33 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-.back-btn {
+/* ==========================================================================
+   BOTÃO VOLTAR (IDÊNTICO AO COMPONENTE DE SAIR DA PROFDEX)
+   ========================================================================== */
+.btn-voltar-retro {
   position: absolute;
   left: 20px;
+  background: #a81808;
+  border: 2px solid #222222;
+  box-shadow: inset -2px -2px 0px #701008, inset 2px 2px 0px #d82810;
   color: white;
-  background: rgba(0,0,0,0.5);
-  border: 1px solid rgba(255,255,255,0.2);
+  padding: 6px 16px;
   border-radius: 20px;
-  padding: 8px 14px;
-  font-size: 13px;
+  font-size: 10px;
+  font-family: 'Press Start 2P', monospace;
+  cursor: pointer;
   pointer-events: auto;
+}
+
+.btn-voltar-retro:active {
+  transform: scale(0.95);
+  box-shadow: inset 2px 2px 0px #701008, inset -2px -2px 0px #d82810;
 }
 
 .scan-title {
   font-size: 12px;
   color: white;
-  text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+  text-shadow: 2px 2px 0px #222222;
 }
 
 .scan-loading {
@@ -206,7 +231,7 @@ onMounted(async () => {
   height: 52px;
   border-radius: 50%;
   border: 4px solid rgba(255,255,255,0.2);
-  border-top-color: var(--red);
+  border-top-color: #cc0000;
   animation: spin 1s linear infinite;
 }
 
@@ -220,13 +245,13 @@ onMounted(async () => {
 
 .error-card {
   background: rgba(0,0,0,0.88);
-  border: 1px solid var(--red);
-  border-radius: var(--radius-lg);
+  border: 2px solid #cc0000;
+  border-radius: 12px;
   padding: 28px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   text-align: center;
   pointer-events: auto;
   width: 100%;
@@ -251,7 +276,7 @@ onMounted(async () => {
   position: absolute;
   width: 32px;
   height: 32px;
-  border-color: var(--yellow);
+  border-color: #f8d030;
   border-style: solid;
   border-width: 0;
   animation: pulse 2s ease-in-out infinite;
@@ -277,8 +302,8 @@ onMounted(async () => {
 
 .found-card {
   background: rgba(8, 8, 24, 0.96);
-  border: 2px solid var(--yellow);
-  border-radius: var(--radius-lg);
+  border: 2px solid #f8d030;
+  border-radius: 12px;
   padding: 24px 20px;
   width: 100%;
   display: flex;
@@ -290,7 +315,7 @@ onMounted(async () => {
 
 .found-badge {
   font-size: 8px;
-  color: var(--yellow);
+  color: #f8d030;
   letter-spacing: 1px;
   animation: pulse 1.5s ease-in-out infinite;
 }
@@ -306,7 +331,7 @@ onMounted(async () => {
   height: 80px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid var(--yellow);
+  border: 3px solid #f8d030;
 }
 
 .found-avatar-img--shadow {
@@ -319,14 +344,14 @@ onMounted(async () => {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: var(--red);
+  background: #cc0000;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 36px;
   font-weight: 900;
   color: white;
-  border: 3px solid var(--yellow);
+  border: 3px solid #f8d030;
 }
 
 .found-avatar-question {
@@ -335,15 +360,15 @@ onMounted(async () => {
   right: -4px;
   width: 28px;
   height: 28px;
-  background: var(--bg);
-  border: 2px solid var(--yellow);
+  background: #181c24;
+  border: 2px solid #f8d030;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 900;
   font-size: 14px;
-  color: var(--yellow);
+  color: #f8d030;
 }
 
 .found-name {
@@ -353,7 +378,7 @@ onMounted(async () => {
 
 .found-desc {
   font-size: 13px;
-  color: var(--text-muted);
+  color: #a8b8c0;
   text-align: center;
   line-height: 1.6;
 }
@@ -370,8 +395,13 @@ onMounted(async () => {
   width: 24px;
   height: 24px;
   border: 3px solid rgba(255,255,255,0.2);
-  border-top-color: var(--yellow);
+  border-top-color: #f8d030;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>
