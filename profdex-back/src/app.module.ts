@@ -5,6 +5,7 @@ import { CapturesModule } from './captures/captures.module';
 import { DiscoveriesModule } from './discoveries/discoveries.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProfessorsModule } from './professors/professors.module';
+import { SeedModule } from './seed/seed.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -16,6 +17,7 @@ import { UsersModule } from './users/users.module';
     ProfessorsModule,
     DiscoveriesModule,
     CapturesModule,
+    SeedModule,
   ],
 })
 export class AppModule {}
