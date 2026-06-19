@@ -10,8 +10,9 @@ const store = useProfessorsStore()
 
 const routeCharacter = computed(() => window.history.state?.character || null)
 const character = computed(() => {
+  const id = route.params.id
   return (
-    store.professors.find((professor) => professor.id === route.params.id) ||
+    store.professors.find((professor) => String(professor.id) === String(id)) ||
     routeCharacter.value ||
     { id: 'modelo-padrao', name: 'Professor', slug: 'professor' }
   )
@@ -43,11 +44,15 @@ onMounted(() => {
 <template>
   <main class="character-ar page">
     <header class="character-ar__header">
-      <button class="back-btn" type="button" @click="router.push({ name: 'batalha' })">
-        Voltar
+      <button
+        class="back-btn"
+        type="button"
+        @click="router.push({ name: 'batalha', query: { profId: character.id } })"
+      >
+        ← Voltar
       </button>
       <div>
-        <span class="pixel eyebrow">PERSONAGEM CAPTURADO</span>
+        <span class="pixel eyebrow">VISUALIZADOR AR</span>
         <h1>Prof. {{ character.name }}</h1>
       </div>
     </header>

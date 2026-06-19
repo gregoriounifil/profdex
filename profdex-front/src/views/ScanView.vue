@@ -213,27 +213,44 @@ onUnmounted(() => {
 
     <!-- Overlay de UI -->
     <div class="scan-ui">
-      <div class="scan-topbar">
-        <button class="back-btn" @click="router.push({ name: 'profdex' })">← Voltar</button>
-        <span class="pixel scan-title">SCANNER</span>
-      </div>
+      <header class="scan-topbar">
+        <button
+          class="back-btn"
+          type="button"
+          aria-label="Voltar ao ProfDex"
+          @click="router.push({ name: 'profdex' })"
+        >
+          <span aria-hidden="true">‹</span>
+          <span>Voltar</span>
+        </button>
+        <div class="scan-heading">
+          <span class="pixel scan-title">SCANNER</span>
+          <span v-if="!loading && !error" class="camera-status">
+            <span class="status-dot" aria-hidden="true" />
+            Câmera ativa
+          </span>
+        </div>
+        <span class="topbar-spacer" aria-hidden="true" />
+      </header>
 
       <!-- Carregando câmera -->
-      <div v-if="loading" class="scan-center">
-        <div class="scan-loader">
+      <div v-if="loading" class="scan-center" role="status" aria-live="polite">
+        <div class="scan-loader" aria-label="Abrindo câmera">
           <div class="loader-pokeball">
             <div class="pb-top" /><div class="pb-mid" /><div class="pb-bot" />
           </div>
-          <span class="pixel" style="font-size:8px;color:white">Iniciando câmera...</span>
+          <span class="pixel state-title">ABRINDO CÂMERA</span>
+          <span class="state-copy">Autorize o acesso quando o navegador solicitar.</span>
         </div>
       </div>
 
       <!-- Erro -->
-      <div v-else-if="error" class="scan-center">
+      <div v-else-if="error" class="scan-center" role="alert">
         <div class="error-card">
-          <span style="font-size:32px">😕</span>
-          <p class="pixel" style="font-size:10px">{{ error }}</p>
-          <button class="btn btn-primary" style="pointer-events:auto" @click="router.push({ name: 'profdex' })">
+          <span class="error-symbol pixel" aria-hidden="true">!</span>
+          <p class="pixel state-title">CÂMERA INDISPONÍVEL</p>
+          <p class="state-copy">{{ error }}</p>
+          <button class="btn btn-primary" type="button" @click="router.push({ name: 'profdex' })">
             <span class="pixel">VOLTAR</span>
           </button>
         </div>
@@ -241,12 +258,12 @@ onUnmounted(() => {
 
       <template v-else>
         <!-- Capturando via token (chamada API em andamento) -->
-        <div v-if="capturing" class="scan-center">
+        <div v-if="capturing" class="scan-center" role="status" aria-live="polite">
           <div class="discovering-card">
             <div class="loader-pokeball discovering-ball">
               <div class="pb-top" /><div class="pb-mid" /><div class="pb-bot" />
             </div>
-            <p class="pixel" style="font-size:10px;color:var(--yellow)">CAPTURANDO!</p>
+            <p class="pixel state-title state-title--accent">CAPTURANDO!</p>
           </div>
         </div>
 
@@ -254,7 +271,7 @@ onUnmounted(() => {
         <div v-else-if="captured && foundProfessor" class="scan-bottom">
           <div class="capture-card animate-fade-in">
             <div class="capture-emoji">🎉</div>
-            <p class="pixel" style="font-size:14px;color:var(--yellow);letter-spacing:2px">CAPTURADO!</p>
+            <p class="pixel capture-title">CAPTURADO!</p>
             <div class="capture-avatar">
               <img
                 v-if="!captureAvatarError"
@@ -266,10 +283,10 @@ onUnmounted(() => {
               <div v-else class="capture-fallback">{{ foundProfessor.name[0] }}</div>
             </div>
             <span class="capture-name">Prof. {{ foundProfessor.name }}</span>
-            <p style="font-size:12px;color:var(--text-muted);text-align:center;line-height:1.6">
+            <p class="capture-copy">
               Adicionado ao seu ProfDex!
             </p>
-            <button class="btn btn-primary" style="pointer-events:auto;margin-top:4px" @click="router.push({ name: 'profdex' })">
+            <button class="btn btn-primary capture-action" type="button" @click="router.push({ name: 'profdex' })">
               <span class="pixel">VER PROFDEX</span>
             </button>
           </div>
@@ -277,26 +294,32 @@ onUnmounted(() => {
 
         <!-- Viewfinder + hint quando nada foi detectado ainda -->
         <div v-else-if="!foundProfessor && !discovering" class="scan-hint">
-          <div class="viewfinder">
+          <div class="viewfinder" aria-hidden="true">
             <div class="vf-corner vf-tl" /><div class="vf-corner vf-tr" />
             <div class="vf-corner vf-bl" /><div class="vf-corner vf-br" />
             <div class="vf-line" />
+            <div class="target-center" />
           </div>
 
           <div class="hint-content">
-            <div class="hint-icon">📷</div>
-            <p class="pixel hint-title">Aponte para o QR code</p>
-            <p class="hint-subtitle">Escaneie o QR de descoberta ou o QR de captura do professor.</p>
+            <div class="hint-status" aria-hidden="true">
+              <span class="hint-status-dot" />
+              QR
+            </div>
+            <div class="hint-copy">
+              <p class="pixel hint-title">APONTE PARA O QR CODE</p>
+              <p class="hint-subtitle">Mantenha o código inteiro dentro da mira.</p>
+            </div>
           </div>
         </div>
 
         <!-- Descobrindo (chamada API em andamento) -->
-        <div v-else-if="discovering" class="scan-center">
+        <div v-else-if="discovering" class="scan-center" role="status" aria-live="polite">
           <div class="discovering-card">
             <div class="loader-pokeball discovering-ball">
               <div class="pb-top" /><div class="pb-mid" /><div class="pb-bot" />
             </div>
-            <p class="pixel" style="font-size:10px;color:var(--yellow)">DESCOBRINDO!</p>
+            <p class="pixel state-title state-title--accent">DESCOBRINDO!</p>
           </div>
         </div>
 
@@ -333,7 +356,11 @@ onUnmounted(() => {
 .scan-view {
   position: fixed;
   inset: 0;
-  background: black;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+  background: #060810;
 }
 
 .scan-view.flash {
@@ -346,6 +373,7 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  contain: strict;
 }
 
 .scan-canvas-hidden { display: none; }
@@ -357,31 +385,70 @@ onUnmounted(() => {
   flex-direction: column;
   pointer-events: none;
   z-index: 10;
+  background:
+    linear-gradient(to bottom, rgba(4, 6, 14, 0.84) 0, transparent 22%),
+    linear-gradient(to top, rgba(4, 6, 14, 0.8) 0, transparent 30%);
 }
 
 /* ── Topbar ── */
 .scan-topbar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 48px 20px 16px;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.75), transparent);
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+  padding: calc(8px + env(safe-area-inset-top)) 16px 8px;
   pointer-events: auto;
-  position: relative;
   flex-shrink: 0;
 }
 .back-btn {
-  position: absolute;
-  left: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 82px;
+  min-height: 44px;
+  padding: 0 12px 0 8px;
   color: white;
-  background: rgba(0,0,0,0.5);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 20px;
-  padding: 8px 14px;
+  background: rgba(8, 8, 24, 0.88);
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--radius);
   font-size: 13px;
   pointer-events: auto;
+  touch-action: manipulation;
 }
-.scan-title { font-size: 12px; color: white; }
+.back-btn > span:first-child {
+  font-size: 26px;
+  line-height: 0;
+  transform: translateY(-1px);
+}
+.scan-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.scan-title {
+  font-size: 11px;
+  color: white;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.65);
+}
+.camera-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 10px;
+  font-weight: 700;
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #65e88b;
+  box-shadow: 0 0 0 3px rgba(101, 232, 139, 0.18);
+}
+.topbar-spacer { width: 82px; }
 
 /* ── Centro ── */
 .scan-center {
@@ -396,6 +463,7 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 20px;
+  text-align: center;
 }
 .loader-pokeball {
   width: 60px; height: 60px;
@@ -409,12 +477,27 @@ onUnmounted(() => {
   animation-duration: 0.5s;
   border-color: var(--yellow);
 }
+.state-title {
+  color: white;
+  font-size: 9px;
+  line-height: 1.5;
+}
+.state-title--accent { color: var(--yellow); }
+.state-copy {
+  max-width: 280px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  text-wrap: pretty;
+}
 .pb-top  { height: 50%; background: var(--red); }
 .pb-mid  { height: 8px; background: #222; }
 .pb-bot  { height: calc(50% - 8px); background: white; }
 .error-card {
-  background: rgba(0,0,0,0.88);
-  border: 1px solid var(--red);
+  max-width: 360px;
+  background: rgba(8, 8, 24, 0.96);
+  border: 2px solid var(--red);
   border-radius: var(--radius-lg);
   padding: 28px 20px;
   display: flex;
@@ -425,6 +508,16 @@ onUnmounted(() => {
   pointer-events: auto;
   width: 100%;
 }
+.error-symbol {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--red);
+  color: white;
+  font-size: 20px;
+}
 
 /* ── Viewfinder ── */
 .scan-hint {
@@ -432,58 +525,97 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px 32px;
+  justify-content: center;
+  gap: clamp(20px, 4vh, 34px);
+  min-height: 0;
+  padding: 8px 16px calc(18px + env(safe-area-inset-bottom));
 }
 .viewfinder {
+  --scan-size: clamp(220px, 68vw, 286px);
+
   position: relative;
-  width: 220px; height: 220px;
-  margin-top: 20px;
+  width: var(--scan-size);
+  height: var(--scan-size);
+  flex: 0 1 auto;
+  contain: layout paint;
+  border-radius: 6px;
+  background: radial-gradient(circle at center, transparent 0 58%, rgba(2, 4, 10, 0.14) 100%);
 }
 .vf-corner {
   position: absolute;
-  width: 28px; height: 28px;
+  width: 44px; height: 44px;
   border-color: var(--yellow);
   border-style: solid;
   border-width: 0;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.8));
 }
-.vf-tl { top: 0; left: 0;   border-top-width: 3px; border-left-width: 3px; }
-.vf-tr { top: 0; right: 0;  border-top-width: 3px; border-right-width: 3px; }
-.vf-bl { bottom: 0; left: 0;  border-bottom-width: 3px; border-left-width: 3px; }
-.vf-br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; }
+.vf-tl { top: 0; left: 0; border-top-width: 4px; border-left-width: 4px; }
+.vf-tr { top: 0; right: 0; border-top-width: 4px; border-right-width: 4px; }
+.vf-bl { bottom: 0; left: 0; border-bottom-width: 4px; border-left-width: 4px; }
+.vf-br { bottom: 0; right: 0; border-bottom-width: 4px; border-right-width: 4px; }
 .vf-line {
   position: absolute;
-  top: 50%; left: 4px; right: 4px;
+  top: 10%; left: 12px; right: 12px;
   height: 2px;
-  background: var(--yellow);
-  opacity: 0.7;
-  animation: scan-line 2s ease-in-out infinite;
+  background: linear-gradient(90deg, transparent, var(--yellow) 18% 82%, transparent);
+  box-shadow: 0 0 10px rgba(255, 222, 0, 0.6);
+  animation: scan-line 2.6s cubic-bezier(0.22, 1, 0.36, 1) infinite alternate;
 }
 @keyframes scan-line {
-  0%, 100% { top: 10%; opacity: 0.4; }
-  50%       { top: 88%; opacity: 1; }
+  from { transform: translateY(0); opacity: 0.65; }
+  to { transform: translateY(calc(var(--scan-size) - 36px)); opacity: 1; }
+}
+.target-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  transform: translate(-50%, -50%);
 }
 .hint-content {
-  background: rgba(8,8,24,0.92);
-  border: 1px solid var(--border);
+  background: rgba(8, 8, 24, 0.92);
+  border: 2px solid rgba(255, 255, 255, 0.22);
   border-radius: var(--radius-lg);
-  padding: 20px;
-  width: 100%;
+  padding: 14px;
+  width: min(100%, 420px);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
 }
-.hint-icon   { font-size: 24px; }
-.hint-title  { font-size: 9px; color: var(--yellow); text-align: center; }
-.hint-subtitle { font-size: 13px; color: var(--text-muted); text-align: center; line-height: 1.6; }
+.hint-status {
+  width: 50px;
+  height: 44px;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 2px solid var(--yellow-dark);
+  border-radius: var(--radius);
+  background: var(--yellow);
+  color: #17130a;
+  font-size: 11px;
+  font-weight: 900;
+}
+.hint-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+}
+.hint-copy { min-width: 0; }
+.hint-title { margin-bottom: 6px; font-size: 8px; color: var(--yellow); }
+.hint-subtitle { font-size: 12px; color: white; line-height: 1.45; text-wrap: pretty; }
 
 /* ── Descoberto (slug QR) ── */
 .scan-bottom {
   flex: 1;
   display: flex;
   align-items: flex-end;
-  padding: 0 16px 32px;
+  justify-content: center;
+  padding: 0 16px calc(24px + env(safe-area-inset-bottom));
   pointer-events: auto;
 }
 .found-card {
@@ -491,11 +623,11 @@ onUnmounted(() => {
   border: 2px solid var(--yellow);
   border-radius: var(--radius-lg);
   padding: 20px;
-  width: 100%;
+  width: min(100%, 520px);
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: 0 0 32px rgba(255,222,0,0.25);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.35);
 }
 .found-avatar { flex-shrink: 0; width: 64px; height: 64px; }
 .found-img {
@@ -523,14 +655,17 @@ onUnmounted(() => {
   border: 2px solid var(--yellow);
   border-radius: var(--radius-lg);
   padding: 28px 20px;
-  width: 100%;
+  width: min(100%, 420px);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  box-shadow: 0 0 48px rgba(255,222,0,0.35);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 }
-.capture-emoji { font-size: 48px; animation: pulse 1s ease-in-out infinite; }
+.capture-emoji { font-size: 42px; animation: pulse 1s ease-in-out infinite; }
+.capture-title { color: var(--yellow); font-size: 13px; letter-spacing: 2px; }
+.capture-copy { color: rgba(255, 255, 255, 0.76); font-size: 12px; line-height: 1.6; text-align: center; }
+.capture-action { margin-top: 4px; }
 .capture-avatar { width: 96px; height: 96px; }
 .capture-img {
   width: 96px; height: 96px;
@@ -556,5 +691,66 @@ onUnmounted(() => {
   0%   { filter: brightness(1); }
   15%  { filter: brightness(3); }
   100% { filter: brightness(1); }
+}
+
+@media (max-width: 360px), (max-height: 680px) {
+  .scan-topbar { padding-inline: 10px; }
+  .back-btn { min-width: 72px; padding-right: 8px; }
+  .topbar-spacer { width: 72px; }
+  .viewfinder { --scan-size: min(62vw, 222px); }
+  .scan-hint { gap: 16px; }
+  .hint-content { padding: 10px; }
+  .capture-card { gap: 10px; padding: 18px 16px; }
+  .capture-avatar, .capture-img, .capture-fallback { width: 76px; height: 76px; }
+  .capture-name { font-size: 18px; }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .scan-topbar {
+    min-height: 52px;
+    padding:
+      calc(4px + env(safe-area-inset-top))
+      calc(12px + env(safe-area-inset-right))
+      4px
+      calc(12px + env(safe-area-inset-left));
+  }
+  .back-btn { min-height: 40px; }
+  .scan-hint {
+    display: grid;
+    grid-template-columns: minmax(190px, 58vh) minmax(260px, 360px);
+    justify-content: center;
+    align-content: center;
+    gap: clamp(24px, 7vw, 72px);
+    padding:
+      4px
+      calc(18px + env(safe-area-inset-right))
+      calc(8px + env(safe-area-inset-bottom))
+      calc(18px + env(safe-area-inset-left));
+  }
+  .viewfinder { --scan-size: min(58vh, 250px); }
+  .hint-content { align-items: center; }
+  .scan-bottom { align-items: center; padding-bottom: 8px; }
+  .found-card { max-width: 560px; }
+  .capture-card {
+    display: grid;
+    grid-template-columns: auto minmax(160px, 1fr);
+    max-width: 560px;
+    padding: 14px 18px;
+  }
+  .capture-emoji { display: none; }
+  .capture-title, .capture-name, .capture-copy, .capture-action { grid-column: 2; }
+  .capture-avatar { grid-column: 1; grid-row: 1 / span 4; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-view.flash,
+  .vf-line,
+  .loader-pokeball,
+  .capture-emoji,
+  .capture-img,
+  .capture-fallback {
+    animation: none;
+  }
+  .vf-line { top: 50%; opacity: 0.8; }
 }
 </style>

@@ -12,8 +12,6 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['battle'])
-
 const imgError = ref(false)
 const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
 </script>
@@ -48,16 +46,13 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
         </template>
 
         <template v-else-if="professor.discovered">
-          <div class="avatar-silhouette" aria-label="Professor descoberto">
-            <span class="avatar-person" aria-hidden="true" />
-          </div>
+          <div class="avatar-silhouette">👤</div>
           <div class="discovered-badge">!</div>
         </template>
 
         <template v-else>
-          <div class="avatar-unknown" aria-label="Professor ainda não descoberto">
-            <span class="avatar-person avatar-person--unknown" aria-hidden="true" />
-            <span class="unknown-badge pixel" aria-hidden="true">?</span>
+          <div class="avatar-unknown">
+            <span class="pixel">???</span>
           </div>
         </template>
       </div>
@@ -73,16 +68,6 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
         <span v-else-if="professor.discovered" class="status-discovered">ENCONTRADO</span>
         <span v-else class="status-unknown">???</span>
       </div>
-
-      <button
-        v-if="professor.captured"
-        class="battle-btn pixel"
-        type="button"
-        :aria-label="`Batalhar com ${professor.name}`"
-        @click.stop="emit('battle', professor)"
-      >
-        ⚔️ BATALHA
-      </button>
     </div>
   </div>
 </template>
@@ -159,6 +144,8 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 32px;
+  filter: grayscale(1) opacity(0.7);
 }
 
 .avatar-unknown {
@@ -170,56 +157,8 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 8px;
   color: var(--text-muted);
-}
-
-.avatar-person {
-  position: relative;
-  width: 38px;
-  height: 42px;
-  opacity: 0.72;
-}
-
-.avatar-person::before {
-  content: '';
-  position: absolute;
-  top: 1px;
-  left: 50%;
-  width: 17px;
-  height: 17px;
-  border-radius: 50%;
-  background: var(--text-muted);
-  transform: translateX(-50%);
-}
-
-.avatar-person::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 22px;
-  border-radius: 18px 18px 8px 8px;
-  background: var(--text-muted);
-}
-
-.avatar-person--unknown {
-  opacity: 0.34;
-}
-
-.unknown-badge {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--bg-surface);
-  color: var(--yellow);
-  border: 2px solid var(--border);
-  font-size: 10px;
 }
 
 .captured-badge {
@@ -271,22 +210,4 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
 .status-captured { color: var(--yellow); }
 .status-discovered { color: var(--red-light); }
 .status-unknown { color: var(--text-muted); }
-
-.battle-btn {
-  width: 100%;
-  padding: 6px 4px;
-  font-size: 7px;
-  letter-spacing: 0.5px;
-  background: var(--red);
-  color: white;
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
-}
-
-.battle-btn:active {
-  transform: scale(0.96);
-  background: var(--red-dark);
-}
 </style>

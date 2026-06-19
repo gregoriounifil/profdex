@@ -13,6 +13,10 @@ onMounted(() => store.fetch())
 
 const captured = computed(() => store.professors.filter((p) => p.captured).length)
 const total = computed(() => store.professors.length)
+
+function goBattle(prof) {
+  router.push({ name: 'batalha', query: { profId: prof.id } })
+}
 </script>
 
 <template>
@@ -55,6 +59,7 @@ const total = computed(() => store.professors.length)
           :key="prof.id"
           :professor="prof"
           :index="i"
+          @battle="goBattle"
         />
       </div>
     </main>
