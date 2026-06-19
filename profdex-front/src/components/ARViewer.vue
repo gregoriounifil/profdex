@@ -6,7 +6,7 @@
     <Transition name="fade">
       <div v-if="isLoading" class="ar-loading">
         <div class="ar-loading__spinner" />
-        <span>Carregando modelo...</span>
+        <span>Carregando modelo... {{ Math.round(loadProgress * 100) }}%</span>
       </div>
     </Transition>
 
@@ -15,7 +15,7 @@
       :ios-src="config.iosSrc" :ar="arStatus !== 'not-supported'" ar-modes="webxr scene-viewer quick-look"
       :ar-placement="config.arPlacement ?? 'floor'" :auto-rotate="config.autoRotate ?? false"
       :camera-controls="config.cameraControls ?? true" shadow-intensity="1" shadow-softness="0.8" exposure="1"
-      touch-action="pan-y" class="ar-viewer__canvas">
+      ar-scale="auto" ar-usdz-max-texture-size="2048" touch-action="pan-y" class="ar-viewer__canvas">
       <!-- Hotspots: pontos clicáveis sobre o modelo -->
       <template v-if="config.hotspots">
         <button v-for="hs in config.hotspots" :key="hs.id" :slot="hs.slot" :data-position="hs.position"
@@ -46,6 +46,14 @@
       </div>
     </model-viewer>
 
+    <div v-if="errorMessage" class="ar-message ar-message--error" role="alert">
+      {{ errorMessage }}
+    </div>
+
+    <div v-else-if="!isLoading && arStatus === 'not-supported'" class="ar-message">
+      O modelo 3D está disponível, mas este navegador não oferece realidade aumentada.
+    </div>
+
     <!-- Badge que aparece quando a câmera AR está ativa -->
     <Transition name="fade">
       <div v-if="arStatus === 'ar-active'" class="ar-status-badge">
@@ -73,6 +81,8 @@ const {
   viewerRef,
   arStatus,
   isLoading,
+  loadProgress,
+  errorMessage,
   activeHotspot,
   openHotspot,
   closeHotspot,
@@ -239,6 +249,26 @@ const {
   background: #4caf50;
   border-radius: 50%;
   animation: pulse 1.5s infinite;
+}
+
+.ar-message {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  background: rgba(17, 17, 17, 0.86);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+  z-index: 5;
+}
+
+.ar-message--error {
+  border-color: rgba(255, 90, 90, 0.55);
 }
 
 @keyframes pulse {

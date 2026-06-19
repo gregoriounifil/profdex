@@ -3,29 +3,16 @@ import { ref, onMounted, onUnmounted } from 'vue'
 export function useModelViewer(config) {
     const arStatus = ref('checking') // 'idle' | 'ar-active' | 'not-supported' | 'checking'
     const isLoading = ref(true)
+    const loadProgress = ref(0)
+    const errorMessage = ref('')
     const activeHotspot = ref(null)
     const viewerRef = ref(null)
 
-    // Detecta se o dispositivo suporta AR
-    async function checkARSupport() {
-        // iOS: Quick Look funciona no Safari iOS 12+ sem checar WebXR
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-        if (isIOS) {
-            arStatus.value = 'idle'
-            return
-        }
-
-        // Android: checa suporte WebXR
-        if ('xr' in navigator) {
-            try {
-                const supported = await navigator.xr.isSessionSupported('immersive-ar')
-                arStatus.value = supported ? 'idle' : 'not-supported'
-            } catch {
-                arStatus.value = 'not-supported'
-            }
-        } else {
-            arStatus.value = 'not-supported'
-        }
+    // O model-viewer considera WebXR, Scene Viewer e Quick Look.
+    // Checar apenas navigator.xr desabilita AR por engano em vários Androids.
+    function updateARSupport() {
+        const el = viewerRef.value
+        arStatus.value = el?.canActivateAR ? 'idle' : 'not-supported'
     }
 
     // Abre/fecha o tooltip do hotspot clicado
@@ -40,6 +27,22 @@ export function useModelViewer(config) {
     // Callbacks dos eventos do model-viewer
     function onLoad() {
         isLoading.value = false
+        loadProgress.value = 1
+        errorMessage.value = ''
+
+        // A capacidade de AR só fica confiável depois que o modelo carregou.
+        requestAnimationFrame(updateARSupport)
+    }
+
+    function onProgress(event) {
+        const progress = Number(event?.detail?.totalProgress)
+        if (Number.isFinite(progress)) loadProgress.value = progress
+    }
+
+    function onError() {
+        isLoading.value = false
+        arStatus.value = 'not-supported'
+        errorMessage.value = 'Não foi possível carregar o modelo 3D.'
     }
 
     function onARStatusChange(event) {
@@ -47,16 +50,19 @@ export function useModelViewer(config) {
         if (status === 'session-started') {
             arStatus.value = 'ar-active'
         } else if (status === 'not-presenting') {
-            arStatus.value = 'idle'
+            updateARSupport()
+        } else if (status === 'failed') {
+            updateARSupport()
+            errorMessage.value = 'Não foi possível abrir a câmera em realidade aumentada.'
         }
     }
 
     onMounted(() => {
-        checkARSupport()
-
         const el = viewerRef.value
         if (!el) return
         el.addEventListener('load', onLoad)
+        el.addEventListener('progress', onProgress)
+        el.addEventListener('error', onError)
         el.addEventListener('ar-status', onARStatusChange)
     })
 
@@ -64,6 +70,8 @@ export function useModelViewer(config) {
         const el = viewerRef.value
         if (!el) return
         el.removeEventListener('load', onLoad)
+        el.removeEventListener('progress', onProgress)
+        el.removeEventListener('error', onError)
         el.removeEventListener('ar-status', onARStatusChange)
     })
 
@@ -71,6 +79,8 @@ export function useModelViewer(config) {
         viewerRef,
         arStatus,
         isLoading,
+        loadProgress,
+        errorMessage,
         activeHotspot,
         openHotspot,
         closeHotspot,

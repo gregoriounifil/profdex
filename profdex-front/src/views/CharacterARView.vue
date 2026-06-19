@@ -19,7 +19,7 @@ const character = computed(() => {
 })
 
 const viewerConfig = computed(() => ({
-  src: character.value.modelUrl || '/models/seu-modelo.glb',
+  src: character.value.modelUrl || '/models/seu-modelo-mobile.glb',
   alt: `Modelo 3D do Prof. ${character.value.name}`,
   arPlacement: 'floor',
   autoRotate: true,

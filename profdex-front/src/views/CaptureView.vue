@@ -22,6 +22,13 @@ const MARKER_PAIRS = [
   [4, 5],
 ]
 
+function goBack() {
+  if (containerRef.value) {
+    containerRef.value.innerHTML = ''
+  }
+  router.push({ name: 'profdex' })
+}
+
 onMounted(async () => {
   if (!store.professors.length) await store.fetch()
   await start()
@@ -76,7 +83,7 @@ function finish() {
 
     <div class="capture-ui">
       <div class="capture-topbar">
-        <button class="back-btn" @click="router.push({ name: 'profdex' })">← Voltar</button>
+        <button class="back-btn" type="button" @click="goBack">← Voltar</button>
         <span class="pixel capture-title">CAPTURA AR</span>
       </div>
 
