@@ -96,7 +96,7 @@ const {
   height: 100%;
   border-radius: 16px;
   overflow: hidden;
-  background: #f0f0f0;
+  background: var(--bg-deep);
 }
 
 .ar-viewer__canvas {
@@ -113,17 +113,17 @@ const {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(26, 26, 26, 0.92);
   z-index: 10;
   font-size: 14px;
-  color: #555;
+  color: var(--text-muted);
 }
 
 .ar-loading__spinner {
   width: 36px;
   height: 36px;
-  border: 3px solid #e0e0e0;
-  border-top-color: #333;
+  border: 3px solid var(--surface-border);
+  border-top-color: var(--unifil-gold);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -144,8 +144,8 @@ const {
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: #111;
-  color: #fff;
+  background: var(--surface);
+  color: var(--text-primary);
   border: none;
   border-radius: 100px;
   font-size: 14px;
@@ -155,7 +155,7 @@ const {
 }
 
 .ar-button:hover:not(:disabled) {
-  background: #333;
+  background: var(--unifil-orange);
   transform: translateY(-1px);
 }
 
@@ -176,8 +176,8 @@ const {
   display: block;
   width: 16px;
   height: 16px;
-  background: #fff;
-  border: 2px solid #111;
+  background: var(--surface);
+  border: 2px solid var(--surface-border);
   border-radius: 50%;
   transition: transform 0.2s;
 }
@@ -185,7 +185,7 @@ const {
 .hotspot--active .hotspot__dot,
 .hotspot:hover .hotspot__dot {
   transform: scale(1.3);
-  background: #111;
+  background: var(--unifil-orange);
 }
 
 .hotspot__tooltip {
@@ -193,8 +193,8 @@ const {
   bottom: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
-  background: #fff;
-  border: 1px solid #e0e0e0;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   padding: 10px 14px;
   min-width: 160px;
@@ -206,13 +206,13 @@ const {
 .hotspot__tooltip strong {
   display: block;
   font-size: 13px;
-  color: #111;
+  color: var(--text-primary);
   margin-bottom: 4px;
 }
 
 .hotspot__tooltip p {
   font-size: 12px;
-  color: #666;
+  color: var(--text-muted);
   margin: 0;
   line-height: 1.4;
 }
@@ -224,7 +224,7 @@ const {
   background: none;
   border: none;
   font-size: 11px;
-  color: #aaa;
+  color: var(--text-muted);
   cursor: pointer;
 }
 
@@ -237,7 +237,7 @@ const {
   align-items: center;
   gap: 8px;
   background: rgba(0, 0, 0, 0.7);
-  color: #fff;
+  color: var(--text-primary);
   font-size: 13px;
   padding: 6px 14px;
   border-radius: 100px;
@@ -246,7 +246,8 @@ const {
 .ar-status-badge__dot {
   width: 8px;
   height: 8px;
-  background: #4caf50;
+  background: var(--success-bg);
+  color: var(--success-text);
   border-radius: 50%;
   animation: pulse 1.5s infinite;
 }
@@ -260,7 +261,7 @@ const {
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 10px;
   background: rgba(17, 17, 17, 0.86);
-  color: #fff;
+  color: var(--text-primary);
   font-size: 12px;
   line-height: 1.4;
   text-align: center;

@@ -90,9 +90,7 @@ function finish() {
       <div v-if="loading" class="capture-loading">
         <div class="capture-loader">
           <div class="loader-pokeball">
-            <div class="pb-top" />
-            <div class="pb-mid" />
-            <div class="pb-bot" />
+            <img class="eagle-ball-icon" src="/eagle-ball.png" alt="" aria-hidden="true" />
           </div>
           <span class="pixel" style="font-size: 8px; color: white">Iniciando AR...</span>
         </div>
@@ -134,9 +132,7 @@ function finish() {
         <div v-else-if="capturing" class="capturing-overlay animate-fade-in">
           <div class="capturing-card">
             <div class="capturing-ball">
-              <div class="pb-top" />
-              <div class="pb-mid" />
-              <div class="pb-bot" />
+              <img class="eagle-ball-icon" src="/eagle-ball.png" alt="" aria-hidden="true" />
             </div>
             <p class="pixel" style="font-size: 10px; color: var(--yellow)">CAPTURANDO!</p>
             <p style="font-size: 12px; color: var(--text-muted)">Prof. {{ capturedProfessor.name }}</p>
@@ -211,8 +207,8 @@ function finish() {
   position: absolute;
   left: 20px;
   color: white;
-  background: rgba(0,0,0,0.5);
-  border: 1px solid rgba(255,255,255,0.2);
+  background: var(--unifil-orange);
+  border: 2px solid var(--surface-border);
   border-radius: 20px;
   padding: 8px 14px;
   font-size: 13px;
@@ -243,9 +239,6 @@ function finish() {
 .loader-pokeball, .capturing-ball {
   width: 60px;
   height: 60px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 4px solid rgba(255,255,255,0.3);
   animation: spin 1s linear infinite;
 }
 
@@ -253,15 +246,10 @@ function finish() {
   width: 72px;
   height: 72px;
   animation: spin 0.5s linear infinite;
-  border-color: var(--yellow);
 }
 
-.pb-top { height: 50%; background: var(--red); }
-.pb-mid { height: 8px; background: #222; }
-.pb-bot { height: calc(50% - 8px); background: white; }
-
 .error-card {
-  background: rgba(0,0,0,0.88);
+  background: rgba(18, 20, 24, 0.96);
   border: 1px solid var(--red);
   border-radius: var(--radius-lg);
   padding: 28px 20px;
@@ -282,7 +270,7 @@ function finish() {
 }
 
 .hint-content {
-  background: rgba(8, 8, 24, 0.92);
+  background: rgba(26, 26, 26, 0.94);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 24px 20px;
@@ -370,7 +358,7 @@ function finish() {
 }
 
 .celebrate-card {
-  background: rgba(8, 8, 24, 0.97);
+  background: rgba(26, 26, 26, 0.98);
   border: 2px solid var(--yellow);
   border-radius: var(--radius-lg);
   padding: 28px 20px;
@@ -379,7 +367,7 @@ function finish() {
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  box-shadow: 0 0 48px rgba(255, 222, 0, 0.35);
+  box-shadow: 0 0 32px rgba(237, 175, 104, 0.3);
 }
 
 .celebrate-emoji {
@@ -406,7 +394,7 @@ function finish() {
   border-radius: 50%;
   object-fit: cover;
   border: 3px solid var(--yellow);
-  box-shadow: 0 0 24px rgba(255, 222, 0, 0.4);
+  box-shadow: 0 0 24px rgba(237, 175, 104, 0.35);
   animation: pulse 1s ease-in-out infinite;
 }
 

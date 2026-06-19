@@ -1,15 +1,38 @@
 :root {
-  --red: #cc0000;
-  --red-dark: #990000;
-  --red-light: #ff3333;
-  --yellow: #ffde00;
-  --yellow-dark: #c8aa00;
-  --bg: #1a1a2e;
-  --bg-card: #16213e;
-  --bg-surface: #0f3460;
-  --border: #2a2a4a;
-  --text: #f0f0f0;
-  --text-muted: #8888aa;
+  /* ProfDex / UniFil brand */
+  --unifil-orange: #995200;
+  --unifil-gold: #edaf68;
+  --bg-deep: #121418;
+  --surface: #1a1a1a;
+  --surface-border: #2b2b2b;
+  --text-primary: #ffffff;
+  --text-muted: #a8b8c0;
+  --error: #ff6b6b;
+  --success-bg: #234a18;
+  --success-text: #82d16b;
+
+  /* DS navigation controls */
+  --ds-orange: #cba034;
+  --ds-orange-glow: #ffdf6d;
+  --ds-orange-shadow: #896712;
+  --ds-blue: #3c7fa1;
+  --ds-blue-glow: #7ec5e6;
+  --ds-blue-shadow: #1e4d66;
+  --ds-green: #549942;
+  --ds-green-glow: #9ae186;
+  --ds-green-shadow: #2e6221;
+
+  /* Compatibility aliases used by existing views */
+  --red: var(--unifil-orange);
+  --red-dark: var(--surface-border);
+  --red-light: var(--unifil-gold);
+  --yellow: var(--unifil-gold);
+  --yellow-dark: var(--unifil-orange);
+  --bg: var(--bg-deep);
+  --bg-card: var(--surface);
+  --bg-surface: var(--surface);
+  --border: var(--surface-border);
+  --text: var(--text-primary);
   --font-pixel: 'Press Start 2P', monospace;
   --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --radius: 8px;
@@ -104,6 +127,16 @@ button {
   font-family: var(--font-pixel);
 }
 
+.eagle-ball-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  user-select: none;
+  pointer-events: none;
+}
+
 .page {
   flex: 1;
   overflow-y: auto;
@@ -112,9 +145,9 @@ button {
 }
 
 .error-msg {
-  background: rgba(204, 0, 0, 0.15);
-  border: 1px solid var(--red);
-  color: #ff6666;
+  background: var(--surface);
+  border: 1px solid var(--error);
+  color: var(--error);
   padding: 10px 14px;
   border-radius: var(--radius);
   font-size: 13px;
@@ -181,10 +214,17 @@ label {
 
 @keyframes captureFlash {
   0% { background: transparent; }
-  20% { background: rgba(255, 222, 0, 0.6); }
+  20% { background: rgba(237, 175, 104, 0.6); }
   100% { background: transparent; }
 }
 
 .animate-fade-in {
   animation: fadeIn 0.3s ease forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loader-pokeball,
+  .capturing-ball {
+    animation: none !important;
+  }
 }

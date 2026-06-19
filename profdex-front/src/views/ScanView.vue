@@ -237,7 +237,7 @@ onUnmounted(() => {
       <div v-if="loading" class="scan-center" role="status" aria-live="polite">
         <div class="scan-loader" aria-label="Abrindo câmera">
           <div class="loader-pokeball">
-            <div class="pb-top" /><div class="pb-mid" /><div class="pb-bot" />
+            <img class="eagle-ball-icon" src="/eagle-ball.png" alt="" aria-hidden="true" />
           </div>
           <span class="pixel state-title">ABRINDO CÂMERA</span>
           <span class="state-copy">Autorize o acesso quando o navegador solicitar.</span>
@@ -261,7 +261,7 @@ onUnmounted(() => {
         <div v-if="capturing" class="scan-center" role="status" aria-live="polite">
           <div class="discovering-card">
             <div class="loader-pokeball discovering-ball">
-              <div class="pb-top" /><div class="pb-mid" /><div class="pb-bot" />
+              <img class="eagle-ball-icon" src="/eagle-ball.png" alt="" aria-hidden="true" />
             </div>
             <p class="pixel state-title state-title--accent">CAPTURANDO!</p>
           </div>
@@ -317,7 +317,7 @@ onUnmounted(() => {
         <div v-else-if="discovering" class="scan-center" role="status" aria-live="polite">
           <div class="discovering-card">
             <div class="loader-pokeball discovering-ball">
-              <div class="pb-top" /><div class="pb-mid" /><div class="pb-bot" />
+              <img class="eagle-ball-icon" src="/eagle-ball.png" alt="" aria-hidden="true" />
             </div>
             <p class="pixel state-title state-title--accent">DESCOBRINDO!</p>
           </div>
@@ -360,7 +360,7 @@ onUnmounted(() => {
   min-height: 100dvh;
   overflow: hidden;
   isolation: isolate;
-  background: #060810;
+  background: var(--bg-deep);
 }
 
 .scan-view.flash {
@@ -386,8 +386,8 @@ onUnmounted(() => {
   pointer-events: none;
   z-index: 10;
   background:
-    linear-gradient(to bottom, rgba(4, 6, 14, 0.84) 0, transparent 22%),
-    linear-gradient(to top, rgba(4, 6, 14, 0.8) 0, transparent 30%);
+    linear-gradient(to bottom, rgba(18, 20, 24, 0.88) 0, transparent 22%),
+    linear-gradient(to top, rgba(18, 20, 24, 0.84) 0, transparent 30%);
 }
 
 /* ── Topbar ── */
@@ -410,7 +410,7 @@ onUnmounted(() => {
   min-height: 44px;
   padding: 0 12px 0 8px;
   color: white;
-  background: rgba(8, 8, 24, 0.88);
+  background: rgba(26, 26, 26, 0.92);
   border: 2px solid rgba(255, 255, 255, 0.28);
   border-radius: var(--radius);
   font-size: 13px;
@@ -445,8 +445,8 @@ onUnmounted(() => {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #65e88b;
-  box-shadow: 0 0 0 3px rgba(101, 232, 139, 0.18);
+  background: var(--success-text);
+  box-shadow: 0 0 0 3px rgba(130, 209, 107, 0.18);
 }
 .topbar-spacer { width: 82px; }
 
@@ -467,15 +467,11 @@ onUnmounted(() => {
 }
 .loader-pokeball {
   width: 60px; height: 60px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 4px solid rgba(255,255,255,0.3);
   animation: spin 1s linear infinite;
 }
 .discovering-ball {
   width: 72px; height: 72px;
   animation-duration: 0.5s;
-  border-color: var(--yellow);
 }
 .state-title {
   color: white;
@@ -491,12 +487,9 @@ onUnmounted(() => {
   text-align: center;
   text-wrap: pretty;
 }
-.pb-top  { height: 50%; background: var(--red); }
-.pb-mid  { height: 8px; background: #222; }
-.pb-bot  { height: calc(50% - 8px); background: white; }
 .error-card {
   max-width: 360px;
-  background: rgba(8, 8, 24, 0.96);
+  background: rgba(26, 26, 26, 0.97);
   border: 2px solid var(--red);
   border-radius: var(--radius-lg);
   padding: 28px 20px;
@@ -558,7 +551,7 @@ onUnmounted(() => {
   top: 10%; left: 12px; right: 12px;
   height: 2px;
   background: linear-gradient(90deg, transparent, var(--yellow) 18% 82%, transparent);
-  box-shadow: 0 0 10px rgba(255, 222, 0, 0.6);
+  box-shadow: 0 0 10px rgba(237, 175, 104, 0.55);
   animation: scan-line 2.6s cubic-bezier(0.22, 1, 0.36, 1) infinite alternate;
 }
 @keyframes scan-line {
@@ -575,7 +568,7 @@ onUnmounted(() => {
   transform: translate(-50%, -50%);
 }
 .hint-content {
-  background: rgba(8, 8, 24, 0.92);
+  background: rgba(26, 26, 26, 0.94);
   border: 2px solid rgba(255, 255, 255, 0.22);
   border-radius: var(--radius-lg);
   padding: 14px;
@@ -595,7 +588,7 @@ onUnmounted(() => {
   border: 2px solid var(--yellow-dark);
   border-radius: var(--radius);
   background: var(--yellow);
-  color: #17130a;
+  color: var(--bg-deep);
   font-size: 11px;
   font-weight: 900;
 }
@@ -619,7 +612,7 @@ onUnmounted(() => {
   pointer-events: auto;
 }
 .found-card {
-  background: rgba(8,8,24,0.95);
+  background: rgba(26, 26, 26, 0.96);
   border: 2px solid var(--yellow);
   border-radius: var(--radius-lg);
   padding: 20px;
@@ -651,7 +644,7 @@ onUnmounted(() => {
 
 /* ── Capturado (token QR) ── */
 .capture-card {
-  background: rgba(8,8,24,0.97);
+  background: rgba(26, 26, 26, 0.98);
   border: 2px solid var(--yellow);
   border-radius: var(--radius-lg);
   padding: 28px 20px;
@@ -672,7 +665,7 @@ onUnmounted(() => {
   border-radius: 50%;
   object-fit: cover;
   border: 3px solid var(--yellow);
-  box-shadow: 0 0 24px rgba(255,222,0,0.4);
+  box-shadow: 0 0 24px rgba(237, 175, 104, 0.35);
   animation: pulse 1s ease-in-out infinite;
 }
 .capture-fallback {

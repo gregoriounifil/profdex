@@ -41,9 +41,7 @@ const steps = [
   <div class="home pk-pixel">
     <div class="home__hero">
       <div class="home__ball">
-        <div class="ball-top" />
-        <div class="ball-middle" />
-        <div class="ball-bottom" />
+        <img class="eagle-ball-icon" src="/eagle-ball.png" alt="" aria-hidden="true" />
       </div>
       <h1 class="home__title">PROF<span>DEX</span></h1>
       <p class="home__subtitle">Colecione seus professores!</p>
@@ -87,61 +85,26 @@ const steps = [
   flex-direction: column;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  background-color: #181c24;
-  color: #ffffff;
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
 }
 
 /* Hero - Seção da Pokebola */
 .home__hero {
-  background: #cc0000;
+  background: var(--unifil-orange);
   padding: 32px 24px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
   position: relative;
-  border-bottom: 6px solid #222222;
+  border-bottom: 6px solid var(--surface);
 }
 
-/* Pokebola Pixel Art */
+/* Eagle Ball pixel art */
 .home__ball {
-  width: 64px;
-  height: 64px;
-  position: relative;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 4px solid #222222;
-  box-shadow: inset -4px -4px 0px rgba(0,0,0,0.2);
-}
-
-.ball-top {
-  height: 50%;
-  background: #ef3e33;
-}
-
-.ball-middle {
-  height: 6px;
-  background: #222222;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ball-middle::after {
-  content: '';
-  width: 14px;
-  height: 14px;
-  background: white;
-  border-radius: 50%;
-  border: 4px solid #222222;
-  position: absolute;
-  z-index: 1;
-}
-
-.ball-bottom {
-  height: calc(50% - 6px);
-  background: white;
+  width: 76px;
+  height: 76px;
 }
 
 /* Títulos do Hero */
@@ -150,15 +113,15 @@ const steps = [
   color: white;
   letter-spacing: 1px;
   margin: 0;
-  text-shadow: 3px 3px 0px #222222;
+  text-shadow: 3px 3px 0 var(--surface);
 }
 
 .home__title span {
-  color: #f8d030;
+  color: var(--unifil-gold);
 }
 
 .home__subtitle {
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 9px;
   margin: 0;
   opacity: 0.9;
@@ -172,18 +135,18 @@ const steps = [
   display: flex;
   flex-direction: column;
   gap: 20px;
-  background: #101820;
+  background: var(--surface);
   
-  border: 4px solid #285068;
+  border: 4px solid var(--unifil-orange);
   box-shadow: 
-    inset 0 0 0 2px #58a0c0,
-    inset 0 0 0 4px #101820;
+    inset 0 0 0 2px var(--unifil-gold),
+    inset 0 0 0 4px var(--surface);
   border-radius: 4px;
 }
 
 .home__section-title {
   font-size: 11px;
-  color: #f8d030;
+  color: var(--unifil-gold);
   text-transform: uppercase;
 }
 
@@ -198,7 +161,7 @@ const steps = [
   align-items: flex-start;
   gap: 12px;
   padding-bottom: 12px;
-  border-bottom: 2px dashed #285068;
+  border-bottom: 2px dashed var(--surface-border);
 }
 
 .step-box:last-child {
@@ -212,14 +175,14 @@ const steps = [
 
 .step-box__num {
   font-size: 9px;
-  color: #f8d030;
+  color: var(--unifil-gold);
   margin-bottom: 6px;
 }
 
 .step-box__title {
   font-weight: bold;
   font-size: 11px;
-  color: #ffffff;
+  color: var(--text-primary);
   margin-bottom: 6px;
   text-transform: uppercase;
   line-height: 1.3;
@@ -227,7 +190,7 @@ const steps = [
 
 .step-box__desc {
   font-size: 9px;
-  color: #a8b8c0;
+  color: var(--text-muted);
   line-height: 1.6;
 }
 
@@ -238,11 +201,11 @@ const steps = [
 
 .btn-pokemon-action {
   width: 100%;
-  background: #a81808;
-  border: 3px solid #222222;
+  background: var(--unifil-orange);
+  border: 3px solid var(--surface-border);
   box-shadow: 
-    inset -3px -3px 0px #701008, 
-    inset 3px 3px 0px #d82810;
+    inset -3px -3px 0 var(--surface-border),
+    inset 3px 3px 0 var(--unifil-gold);
   padding: 14px;
   cursor: pointer;
   transition: transform 0.1s ease;
@@ -251,13 +214,13 @@ const steps = [
 .btn-pokemon-action span {
   font-family: 'Press Start 2P', monospace;
   font-size: 12px;
-  color: #ffffff;
-  text-shadow: 2px 2px 0px #222222;
+  color: var(--text-primary);
+  text-shadow: 2px 2px 0 var(--surface);
   letter-spacing: 1px;
 }
 
 .btn-pokemon-action:active {
   transform: scale(0.98);
-  background: #701008;
+  background: var(--surface-border);
 }
 </style>

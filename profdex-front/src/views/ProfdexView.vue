@@ -73,7 +73,7 @@ function goBattle(prof) {
         <span class="nav-icon">📷</span>
         <span class="pixel nav-label">Scanear</span>
       </button>
-      <button class="nav-btn" @click="router.push({ name: 'batalha' })">
+      <button class="nav-btn nav-btn--battle" @click="router.push({ name: 'batalha' })">
         <span class="nav-icon nav-icon--text">BT</span>
         <span class="pixel nav-label">Batalha</span>
       </button>
@@ -203,10 +203,11 @@ function goBattle(prof) {
 }
 
 .profdex__nav {
-  background: var(--bg-card);
-  border-top: 1px solid var(--border);
+  background: var(--surface);
+  border-top: 3px solid var(--surface-border);
   display: flex;
-  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+  gap: 8px;
+  padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
   flex-shrink: 0;
 }
 
@@ -215,20 +216,40 @@ function goBattle(prof) {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  background: transparent;
-  color: var(--text-muted);
+  min-height: 52px;
+  color: var(--text-primary);
   padding: 8px 4px;
   border-radius: var(--radius);
-  transition: color 0.15s;
+  border: 3px solid var(--surface);
+  text-shadow: 1px 1px 0 var(--surface);
+  transition: transform 0.15s ease, filter 0.15s ease;
 }
 
 .nav-btn--active {
-  color: var(--yellow);
+  background: var(--ds-orange);
+  color: var(--surface);
+  text-shadow: none;
+  box-shadow: inset 0 3px 0 var(--ds-orange-glow), inset 0 -4px 0 var(--ds-orange-shadow);
 }
 
 .nav-btn--primary {
-  color: var(--red-light);
+  background: var(--ds-blue);
+  color: var(--text-primary);
+  box-shadow: inset 0 3px 0 var(--ds-blue-glow), inset 0 -4px 0 var(--ds-blue-shadow);
+}
+
+.nav-btn--battle {
+  background: var(--ds-green);
+  color: var(--surface);
+  text-shadow: none;
+  box-shadow: inset 0 3px 0 var(--ds-green-glow), inset 0 -4px 0 var(--ds-green-shadow);
+}
+
+.nav-btn:active {
+  transform: translateY(2px);
+  filter: brightness(0.92);
 }
 
 .nav-icon {
@@ -242,5 +263,11 @@ function goBattle(prof) {
 
 .nav-label {
   font-size: 7px;
+}
+
+.nav-btn--primary .nav-label {
+  padding: 3px 4px;
+  background: var(--surface);
+  border-radius: 2px;
 }
 </style>

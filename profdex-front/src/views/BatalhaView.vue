@@ -272,7 +272,7 @@ function hideBrokenImage(event) {
 }
 
 .battle-option--ar {
-  border-color: #3a7bd5;
+  border-color: var(--ds-blue);
 }
 
 .option-icon {
@@ -290,7 +290,7 @@ function hideBrokenImage(event) {
 }
 
 .option-icon--ar {
-  color: #3a7bd5;
+  color: var(--ds-blue-glow);
   font-size: 12px;
 }
 

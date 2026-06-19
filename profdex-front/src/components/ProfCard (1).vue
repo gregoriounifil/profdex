@@ -139,7 +139,7 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: #1a1a3a;
+  background: var(--surface);
   border: 2px solid var(--border);
   display: flex;
   align-items: center;
@@ -152,7 +152,7 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: #1a1a3a;
+  background: var(--surface);
   border: 2px dashed var(--border);
   display: flex;
   align-items: center;

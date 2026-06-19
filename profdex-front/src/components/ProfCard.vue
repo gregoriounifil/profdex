@@ -41,7 +41,7 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
             class="avatar-img"
             @error="imgError = true"
           />
-          <div v-else class="avatar-fallback" :style="{ background: `hsl(${index * 110}, 60%, 40%)` }">
+          <div v-else class="avatar-fallback">
             {{ professor.name[0] }}
           </div>
           <div class="captured-badge">✓</div>
@@ -97,8 +97,7 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
 }
 
 .prof-card--captured {
-  border-color: var(--yellow);
-  box-shadow: 0 0 16px rgba(255, 222, 0, 0.2);
+  border-color: var(--success-text);
 }
 
 .prof-card__inner {
@@ -145,7 +144,8 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
   justify-content: center;
   font-weight: 900;
   font-size: 28px;
-  color: white;
+  background: var(--unifil-orange);
+  color: var(--text-primary);
   text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
   border: 2px solid var(--yellow);
 }
@@ -154,7 +154,7 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: #1a1a3a;
+  background: var(--surface);
   border: 2px solid var(--border);
   display: flex;
   align-items: center;
@@ -165,7 +165,7 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: #1a1a3a;
+  background: var(--surface);
   border: 2px dashed var(--border);
   display: flex;
   align-items: center;
@@ -228,13 +228,14 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
   right: 0;
   width: 22px;
   height: 22px;
-  background: var(--yellow);
+  background: var(--success-bg);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  color: var(--bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-text);
   font-weight: 900;
 }
 
@@ -268,7 +269,7 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
   letter-spacing: 0.5px;
 }
 
-.status-captured { color: var(--yellow); }
+.status-captured { color: var(--success-text); }
 .status-discovered { color: var(--red-light); }
 .status-unknown { color: var(--text-muted); }
 
