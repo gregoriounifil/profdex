@@ -25,6 +25,22 @@ const selectedProfessor = computed(() => {
   )
 })
 
+function goToArena() {
+  const professor = selectedProfessor.value
+  router.push({
+    name: 'arena',
+    params: { id: professor?.id || 'modelo-padrao' },
+    state: {
+      character: {
+        id: professor?.id || 'modelo-padrao',
+        name: professor?.name || 'Professor',
+        slug: professor?.slug || 'professor',
+        modelUrl: professor?.modelUrl,
+      },
+    },
+  })
+}
+
 function goToCharacterAR() {
   const professor = selectedProfessor.value
   router.push({
@@ -39,6 +55,11 @@ function goToCharacterAR() {
       },
     },
   })
+}
+
+function openBattleGuide() {
+  const { href } = router.resolve({ name: 'battle-guide' })
+  window.open(href, '_blank', 'noopener')
 }
 
 function goBack() {
@@ -57,7 +78,8 @@ function hideBrokenImage(event) {
       <div class="header__info">
         <span class="pixel eyebrow">ÁREA DE BATALHA</span>
         <h1 class="pixel header__title">
-          {{ selectedProfessor ? `Prof. ${selectedProfessor.name}` : 'BATALHA' }}
+          <!-- {{ selectedProfessor ? `Prof. ${selectedProfessor.name}` : 'BATALHA' }} -->
+            {{ selectedProfessor ? `Professores` : 'BATALHA' }}
         </h1>
       </div>
     </header>
@@ -83,7 +105,7 @@ function hideBrokenImage(event) {
         <button
           class="battle-option battle-option--primary"
           type="button"
-          @click="router.push({ name: 'scan' })"
+          @click="goToArena"
         >
           <span class="option-icon">⚔️</span>
           <span class="pixel option-label">Batalha</span>
@@ -101,6 +123,15 @@ function hideBrokenImage(event) {
         >
           <span class="option-icon option-icon--ar">AR</span>
           <span class="pixel option-label">Ver Prof.</span>
+        </button>
+
+        <button
+          class="battle-option battle-option--guide"
+          type="button"
+          @click="openBattleGuide"
+        >
+          <span class="option-icon">📖</span>
+          <span class="pixel option-label">Instruções de Batalha</span>
         </button>
       </section>
     </main>
@@ -273,6 +304,10 @@ function hideBrokenImage(event) {
 
 .battle-option--ar {
   border-color: var(--ds-blue);
+}
+
+.battle-option--guide {
+  border-color: var(--ds-green);
 }
 
 .option-icon {

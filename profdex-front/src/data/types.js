@@ -1,0 +1,112 @@
+// Sistema de tipos da batalha (roda de vantagens).
+//
+// Regra: a roda é cíclica. Cada tipo é SUPER-EFICAZ (2×) contra os 2 tipos
+// SEGUINTES no sentido horário e FRACO (0,5×) contra os 2 tipos ANTERIORES.
+// Contra os demais o dano é neutro (1×).
+//
+// A ordem do array abaixo É a roda (sentido horário). Mudar a ordem muda as
+// vantagens — os "forte/fraco" são derivados dela em runtime, não digitados à mão.
+
+export const SUPER_EFFECTIVE = 2
+export const NOT_EFFECTIVE = 0.5
+export const NEUTRAL = 1
+
+export const TYPE_CYCLE = [
+  {
+    id: 'logica',
+    label: 'Lógica',
+    icon: '🧩',
+    color: '#6C4DE0',
+    description: 'Prova formal, dedução e abstração pura.',
+  },
+  {
+    id: 'calculo',
+    label: 'Cálculo',
+    icon: '📐',
+    color: '#F03E3E',
+    description: 'Limites, derivadas e otimização contínua.',
+  },
+  {
+    id: 'ia-ml',
+    label: 'IA / ML',
+    icon: '🧠',
+    color: '#12B886',
+    description: 'Redes neurais, aprendizado e previsão.',
+  },
+  {
+    id: 'robotica',
+    label: 'Robótica',
+    icon: '🤖',
+    color: '#0CA5B8',
+    description: 'Sensores, atuadores e controle físico.',
+  },
+  {
+    id: 'arquitetura',
+    label: 'Arquitetura',
+    icon: '🖥️',
+    color: '#F5A623',
+    description: 'Hardware, pipelines e baixo nível.',
+  },
+  {
+    id: 'seguranca',
+    label: 'Segurança',
+    icon: '🔒',
+    color: '#495057',
+    description: 'Exploits, cripto e defesa de sistemas.',
+  },
+  {
+    id: 'redes',
+    label: 'Redes',
+    icon: '🌐',
+    color: '#3B5BDB',
+    description: 'Protocolos, roteamento e sistemas distribuídos.',
+  },
+  {
+    id: 'banco',
+    label: 'Banco de Dados',
+    icon: '🗄️',
+    color: '#E64980',
+    description: 'Consultas, índices e álgebra relacional.',
+  },
+  {
+    id: 'algoritmos',
+    label: 'Algoritmos',
+    icon: '🔀',
+    color: '#66BB2E',
+    description: 'Estruturas, complexidade e eficiência.',
+  },
+]
+
+const N = TYPE_CYCLE.length
+const INDEX_BY_ID = new Map(TYPE_CYCLE.map((t, i) => [t.id, i]))
+
+export function getType(id) {
+  const i = INDEX_BY_ID.get(id)
+  return i === undefined ? null : TYPE_CYCLE[i]
+}
+
+// Os 2 tipos seguintes (horário) — contra quem este tipo é forte.
+export function strongAgainst(id) {
+  const i = INDEX_BY_ID.get(id)
+  if (i === undefined) return []
+  return [TYPE_CYCLE[(i + 1) % N], TYPE_CYCLE[(i + 2) % N]]
+}
+
+// Os 2 tipos anteriores — contra quem este tipo é fraco.
+export function weakAgainst(id) {
+  const i = INDEX_BY_ID.get(id)
+  if (i === undefined) return []
+  return [TYPE_CYCLE[(i - 1 + N) % N], TYPE_CYCLE[(i - 2 + N) % N]]
+}
+
+// Multiplicador de dano de `attackerId` atacando `defenderId`.
+// Usar em useBattle.js (rollDamage) quando os golpes tiverem tipo.
+export function effectiveness(attackerId, defenderId) {
+  const a = INDEX_BY_ID.get(attackerId)
+  const d = INDEX_BY_ID.get(defenderId)
+  if (a === undefined || d === undefined) return NEUTRAL
+  const forward = (d - a + N) % N // distância no sentido horário
+  if (forward === 1 || forward === 2) return SUPER_EFFECTIVE
+  if (forward === N - 1 || forward === N - 2) return NOT_EFFECTIVE
+  return NEUTRAL
+}

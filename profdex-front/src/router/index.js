@@ -46,6 +46,19 @@ const router = createRouter({
       meta: { auth: true },
     },
     {
+      path: '/batalha/guia',
+      name: 'battle-guide',
+      component: () => import('../views/BattleGuideView.vue'),
+      meta: { auth: true },
+    },
+    {
+      path: '/arena/:id',
+      name: 'arena',
+      component: () => import('../views/ArenaView.vue'),
+      meta: { auth: true },
+      props: true,
+    },
+    {
       path: '/character-ar/:id',
       name: 'character-ar',
       component: () => import('../views/CharacterARView.vue'),

@@ -24,7 +24,11 @@ async function submit() {
     await auth.register(matricula.value.trim(), name.value.trim(), password.value)
     router.push({ name: 'profdex' })
   } catch (err) {
-    errorMsg.value = err.response?.data?.message ?? 'Erro ao cadastrar'
+    // Sem resposta (rede) ou 5xx (proxy/back caído) = servidor fora do ar
+    const serverDown = !err.response || err.response.status >= 500
+    errorMsg.value = serverDown
+      ? 'Servidor indisponível. Verifique se o backend está rodando.'
+      : (err.response.data?.message ?? 'Erro ao cadastrar')
   } finally {
     loading.value = false
   }

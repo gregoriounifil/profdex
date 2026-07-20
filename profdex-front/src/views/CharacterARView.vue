@@ -14,7 +14,8 @@ const character = computed(() => {
   return (
     store.professors.find((professor) => String(professor.id) === String(id)) ||
     routeCharacter.value ||
-    { id: 'modelo-padrao', name: 'Professor', slug: 'professor' }
+    // { id: 'modelo-padrao', name: 'Professor', slug: 'professor' }
+    { id: 'modelo-padrao', name: 'GUstavão da Massa', slug: 'professor' }
   )
 })
 
@@ -53,7 +54,8 @@ onMounted(() => {
       </button>
       <div>
         <span class="pixel eyebrow">VISUALIZADOR AR</span>
-        <h1>Prof. {{ character.name }}</h1>
+        <!-- <h1>Prof. {{ character.name }}</h1>!-> -->
+        <h1>Prof. Gustvão</h1>
       </div>
     </header>
 

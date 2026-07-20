@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "profdex-front",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "profdex-front"],
+      "port": 5173,
+      "autoPort": true
+    },
+    {
+      "name": "profdex-back",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start:dev", "--prefix", "profdex-back"],
+      "port": 3000
+    }
+  ]
+}
