@@ -170,7 +170,7 @@ function goBack() {
         @click="toggleAR"
       >
         <span class="arena__ar-dot" aria-hidden="true" />
-        {{ arEnabled ? 'AR ligada' : 'Cenário 3D' }}
+        {{ arEnabled ? 'Desativar AR' : 'Ativar AR' }}
       </button>
       <p v-if="arError && !arEnabled" class="arena__ar-note" role="status">
         Sem câmera — usando o cenário 3D
@@ -293,6 +293,12 @@ function goBack() {
   left: 10%;
   width: 50%;
   height: 34%;
+  /* Contorno vermelho discreto: drop-shadow segue a silhueta do modelo
+     (o canvas é transparente), diferente de um border/outline retangular.
+     --error é o vermelho real da paleta (--red do tema é marrom). */
+  filter:
+    drop-shadow(0 0 1px var(--error))
+    drop-shadow(0 0 2px var(--error));
 }
 
 /* Jogador: em primeiro plano, à direita, de costas — abaixado (mais para baixo) */
@@ -301,6 +307,10 @@ function goBack() {
   bottom: 17%;
   width: 88%;
   height: 50%;
+  /* Mesmo contorno, em azul */
+  filter:
+    drop-shadow(0 0 1px var(--ds-blue-glow))
+    drop-shadow(0 0 2px var(--ds-blue-glow));
 }
 
 /* Flash + tremida no modelo que tomou dano */
