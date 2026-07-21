@@ -24,9 +24,22 @@ npm run dev:back
 ```
 
 - Front: Vue 3 + Vite + Pinia + vue-router. Proxy `/api` → `http://localhost:3000`.
-- Back: NestJS + Prisma + SQLite (`profdex-back/prisma/dev.db`). JWT em `.env`.
-- Usuário de teste no banco local: matrícula `teste123`, senha `senha123`.
+- Back: NestJS + Prisma + **PostgreSQL** (Supabase/Railway). JWT em `.env`.
 - **A batalha precisa de login** (rota tem `meta: { auth: true }`).
+
+### ⚠️ Banco de dados — atenção ao rodar localmente
+O commit `e0ddd82 (chore(back): configure Prisma PostgreSQL for Railway)` trocou o
+Prisma de SQLite para **PostgreSQL**. Consequências para rodar local:
+- O `profdex-back/.env` precisa de `DATABASE_URL` e `DIRECT_URL` no formato
+  `postgresql://...` (ver `profdex-back/.env.example` — modelo Supabase pooler).
+  Um `DATABASE_URL="file:./dev.db"` (SQLite antigo) faz o backend quebrar no boot
+  com `PrismaClientInitializationError P1012` ("URL must start with postgresql://").
+- O antigo `dev.db` (SQLite) e o usuário de teste `teste123/senha123` **não valem
+  mais** — o banco agora é Postgres e precisa ser migrado/semeado:
+  `npm run db:migrate` e `npm run db:seed` (em `profdex-back/`) apontando para o Postgres.
+- Alternativa p/ dev offline: reverter o datasource de `schema.prisma` para
+  `provider = "sqlite"` + `DATABASE_URL="file:./dev.db"` — mas isso desfaz a config
+  de deploy do Railway; combine com o time antes.
 
 ## Arquivos da batalha
 

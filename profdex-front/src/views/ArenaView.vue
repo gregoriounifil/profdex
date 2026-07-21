@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import BattleHpBar from '../components/BattleHpBar.vue'
 import BinaryTunnelScene from '../components/BinaryTunnelScene.vue'
 import { useBattle } from '../composables/useBattle.js'
+import { useArenaAR } from '../composables/useArenaAR.js'
 import { useProfessorsStore } from '../stores/professors'
 import { getMovesFor } from '../data/moves.js'
 
@@ -107,6 +108,29 @@ const enemyModelSrc = computed(
 )
 const playerModelSrc = enemyModelSrc
 
+// ── AR ancorado (WebXR): coloca os dois lutadores a 1,7 m no plano detectado.
+// Independente do magic-window acima; iOS/sem WebXR cai em `xrError`. ────────
+const arOverlay = useTemplateRef('arOverlay')
+const {
+  arSupport,
+  arActive,
+  arError: xrError,
+  hint: arHint,
+  checkSupport,
+  enterAR,
+  exitAR,
+} = useArenaAR()
+
+onMounted(checkSupport)
+
+function launchAR() {
+  enterAR({
+    enemySrc: enemyModelSrc.value,
+    playerSrc: playerModelSrc.value,
+    overlay: arOverlay.value,
+  })
+}
+
 function goBack() {
   router.push({ name: 'batalha', query: { profId: enemyProfessor.value.id } })
 }
@@ -176,10 +200,31 @@ function goBack() {
         Sem câmera — usando o cenário 3D
       </p>
 
+      <!-- AR ancorado (WebXR): joga os dois lutadores no chão a 1,7 m -->
+      <button
+        v-if="arSupport === 'supported'"
+        class="arena__ar-real"
+        type="button"
+        @click="launchAR"
+      >
+        Ver batalha em AR
+      </button>
+      <p
+        v-else-if="arSupport === 'unsupported'"
+        class="arena__ar-note arena__ar-note--xr"
+        role="status"
+      >
+        AR ancorado indisponível neste aparelho
+      </p>
+      <p v-if="xrError" class="arena__ar-note arena__ar-note--xr" role="status">
+        {{ xrError }}
+      </p>
+
       <!-- Barra do inimigo (topo esquerdo, como no esboço) -->
+      <!-- Nome fixo temporário; original: :name="`Prof. ${enemy.name}`" -->
       <BattleHpBar
         class="arena__enemy-bar"
-        :name="`Prof. ${enemy.name}`"
+        name="Prof. Gustavo"
         :hp="enemyHp"
         :max-hp="enemy.maxHp"
         :level="7"
@@ -230,6 +275,17 @@ function goBack() {
           Fugir
         </button>
       </section>
+    </div>
+
+    <!-- Overlay do DOM durante a sessão WebXR (dom-overlay). Fica sempre no
+         DOM (exigência do WebXR), mas só mostra controles com o AR ativo. -->
+    <div ref="arOverlay" class="arena__xr-overlay">
+      <template v-if="arActive">
+        <p class="arena__xr-hint" aria-live="polite">{{ arHint }}</p>
+        <button class="arena__xr-exit" type="button" @click="exitAR">
+          Sair do AR
+        </button>
+      </template>
     </div>
   </main>
 </template>
@@ -403,6 +459,65 @@ function goBack() {
   font-size: 10px;
   line-height: 1.4;
   text-align: right;
+}
+
+.arena__ar-note--xr {
+  top: calc(136px + env(safe-area-inset-top));
+}
+
+/* Botão de AR ancorado (WebXR) — abaixo do toggle de câmera */
+.arena__ar-real {
+  position: absolute;
+  top: calc(96px + env(safe-area-inset-top));
+  right: 12px;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 100px;
+  background: var(--ds-blue);
+  color: var(--bg-deep);
+  border: 1px solid var(--ds-blue-glow);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Overlay do DOM durante a sessão imersiva. Sem AR ativo fica invisível e
+   deixa o toque passar (pointer-events: none); só os controles recebem toque. */
+.arena__xr-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.arena__xr-hint {
+  position: absolute;
+  top: calc(16px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 80%;
+  padding: 8px 14px;
+  border-radius: 100px;
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--text);
+  font-size: 12px;
+  text-align: center;
+}
+
+.arena__xr-exit {
+  position: absolute;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  min-height: 44px;
+  padding: 0 28px;
+  border-radius: 100px;
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 700;
+  pointer-events: auto;
 }
 
 .arena__enemy-bar {
