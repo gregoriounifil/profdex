@@ -52,6 +52,18 @@ const router = createRouter({
       meta: { auth: true },
     },
     {
+      // Exemplo/laboratório do TresJS — sem guarda de auth para facilitar testar
+      path: '/tres-demo',
+      name: 'tres-demo',
+      component: () => import('../views/TresDemoView.vue'),
+    },
+    {
+      // Cenário do túnel binário (inspirado na imagem de referência)
+      path: '/tunel-binario',
+      name: 'binary-tunnel',
+      component: () => import('../views/BinaryTunnelView.vue'),
+    },
+    {
       path: '/arena/:id',
       name: 'arena',
       component: () => import('../views/ArenaView.vue'),
