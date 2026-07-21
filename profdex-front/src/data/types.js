@@ -48,11 +48,11 @@ export const TYPE_CYCLE = [
     description: 'Hardware, pipelines e baixo nível.',
   },
   {
-    id: 'seguranca',
-    label: 'Segurança',
-    icon: '🔒',
+    id: 'npi',
+    label: 'NPI',
+    icon: '🧑‍🏫',
     color: '#495057',
-    description: 'Exploits, cripto e defesa de sistemas.',
+    description: 'Práticas integradoras: projetos, code review e entregas.',
   },
   {
     id: 'redes',
@@ -85,6 +85,23 @@ export function getType(id) {
   return i === undefined ? null : TYPE_CYCLE[i]
 }
 
+// Deriva um id de tipo de forma determinística a partir de uma "semente"
+// (slug/id/nome do professor). Estável: o mesmo professor cai sempre no mesmo
+// tipo, mesmo que a API não traga um campo `type`.
+export function typeIdFromSeed(seed) {
+  const s = String(seed ?? '')
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return TYPE_CYCLE[h % N].id
+}
+
+// Tipo `n` posições adiante na roda (usado p/ garantir tipos distintos).
+export function shiftType(id, n) {
+  const i = INDEX_BY_ID.get(id)
+  if (i === undefined) return id
+  return TYPE_CYCLE[(i + n + N) % N].id
+}
+
 // Os 2 tipos seguintes (horário) — contra quem este tipo é forte.
 export function strongAgainst(id) {
   const i = INDEX_BY_ID.get(id)
@@ -109,4 +126,12 @@ export function effectiveness(attackerId, defenderId) {
   if (forward === 1 || forward === 2) return SUPER_EFFECTIVE
   if (forward === N - 1 || forward === N - 2) return NOT_EFFECTIVE
   return NEUTRAL
+}
+
+// Efetividade de um golpe (tipo único) contra um defensor de 1 OU 2 tipos:
+// produto das efetividades contra cada tipo do defensor. Combina em
+// 4× / 2× / 1× / 0,5× / 0,25× (como em Pokémon).
+export function typeMultiplier(attackType, defenderTypes) {
+  const list = Array.isArray(defenderTypes) ? defenderTypes : [defenderTypes]
+  return list.reduce((mult, d) => mult * effectiveness(attackType, d), 1)
 }

@@ -1,106 +1,163 @@
 import { computed, ref } from 'vue'
+import {
+  createCombatant,
+  turnOrder,
+  upkeep,
+  performMove,
+  chooseEnemyMove,
+  statusLabel,
+} from './battleEngine.js'
 
-// Máquina de turnos da batalha. Não conhece a UI: só expõe estado reativo
-// (HP, fase, mensagem, flags de animação) e as ações do jogador.
+// Camada reativa da batalha: envolve o motor puro (battleEngine.js) com refs do
+// Vue e anima a fila de eventos com timing. Não conhece a UI — só expõe estado.
 //
-// Fases: 'intro' → 'player-turn' → 'busy' (animações/turno inimigo) → ...
+// Fases: 'intro' → 'player-turn' → 'busy' (resolução) → ...
 //        terminando em 'victory' | 'defeat' | 'fled'.
 export function useBattle({ player, enemy }) {
-    const playerHp = ref(player.maxHp)
-    const enemyHp = ref(enemy.maxHp)
-    const phase = ref('intro')
-    const message = ref(`${enemy.name} selvagem apareceu!`)
+  // Estado "de verdade" vive no motor; os refs abaixo espelham para a UI.
+  const state = {
+    player: createCombatant(player),
+    enemy: createCombatant(enemy),
+  }
 
-    // Flags que a UI usa para animar dano (shake/flash)
-    const enemyHit = ref(false)
-    const playerHit = ref(false)
+  const playerHp = ref(state.player.hp)
+  const enemyHp = ref(state.enemy.hp)
+  const phase = ref('intro')
+  const message = ref(`${enemy.name} apareceu para o duelo!`)
 
-    const isOver = computed(() =>
-        ['victory', 'defeat', 'fled'].includes(phase.value)
-    )
+  const enemyHit = ref(false)
+  const playerHit = ref(false)
+  const playerStatus = ref('')
+  const enemyStatus = ref('')
 
-    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+  const isOver = computed(() => ['victory', 'defeat', 'fled'].includes(phase.value))
 
-    // Dano base do golpe com variação de ±20%
-    function rollDamage(move) {
-        const variance = 0.8 + Math.random() * 0.4
-        return Math.max(1, Math.round(move.power * variance))
-    }
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-    function start() {
-        phase.value = 'intro'
-        message.value = `${enemy.name} selvagem apareceu!`
-        setTimeout(() => {
-            if (phase.value === 'intro') {
-                phase.value = 'player-turn'
-                message.value = 'O que você vai fazer?'
-            }
-        }, 1400)
-    }
+  function syncHp() {
+    playerHp.value = state.player.hp
+    enemyHp.value = state.enemy.hp
+    playerStatus.value = statusLabel(state.player.status)
+    enemyStatus.value = statusLabel(state.enemy.status)
+  }
 
-    async function attack(attacker, move, targetHp, hitFlag) {
-        message.value = `${attacker} usou ${move.name}!`
-        await delay(900)
+  const hitFlag = (key) => (key === 'player' ? playerHit : enemyHit)
 
-        if (Math.random() > move.accuracy) {
-            message.value = 'Errou o ataque!'
-            await delay(900)
-            return
+  // Reproduz uma fila de eventos do motor, animando dano/cura e mensagens.
+  async function play(events) {
+    for (const ev of events) {
+      switch (ev.type) {
+        case 'message':
+          message.value = ev.text
+          await delay(850)
+          break
+        case 'damage': {
+          const flag = hitFlag(ev.target)
+          flag.value = true
+          syncHp()
+          await delay(450)
+          flag.value = false
+          message.value = `Causou ${ev.amount} de dano!`
+          await delay(650)
+          break
         }
-
-        const damage = rollDamage(move)
-        hitFlag.value = true
-        targetHp.value = Math.max(0, targetHp.value - damage)
-        await delay(500)
-        hitFlag.value = false
-        message.value = `Causou ${damage} de dano!`
-        await delay(900)
+        case 'heal':
+          syncHp()
+          await delay(600)
+          break
+        case 'status':
+          syncHp()
+          await delay(300)
+          break
+        case 'effectiveness':
+          message.value = {
+            super4: 'Foi devastador! (×4)',
+            super: 'Foi super eficaz!',
+            weak: 'Não foi muito eficaz…',
+            weak4: 'Mal arranhou… (×¼)',
+          }[ev.level] || ''
+          await delay(800)
+          break
+        case 'faint':
+          syncHp()
+          await delay(300)
+          break
+        default:
+          break
+      }
     }
+    syncHp()
+  }
 
-    async function useMove(move) {
-        if (phase.value !== 'player-turn') return
-        phase.value = 'busy'
+  function checkEnd() {
+    if (state.enemy.hp <= 0) {
+      phase.value = 'victory'
+      message.value = `${enemy.name} foi derrotado!`
+      return true
+    }
+    if (state.player.hp <= 0) {
+      phase.value = 'defeat'
+      message.value = 'Você foi derrotado...'
+      return true
+    }
+    return false
+  }
 
-        // Turno do jogador
-        await attack(player.name, move, enemyHp, enemyHit)
-        if (enemyHp.value <= 0) {
-            phase.value = 'victory'
-            message.value = `${enemy.name} foi derrotado!`
-            return
-        }
-
-        // Turno do inimigo: escolhe um golpe aleatório
-        const enemyMove = enemy.moves[Math.floor(Math.random() * enemy.moves.length)]
-        await attack(enemy.name, enemyMove, playerHp, playerHit)
-        if (playerHp.value <= 0) {
-            phase.value = 'defeat'
-            message.value = 'Você foi derrotado...'
-            return
-        }
-
+  function start() {
+    phase.value = 'intro'
+    message.value = `${enemy.name} apareceu para o duelo!`
+    setTimeout(() => {
+      if (phase.value === 'intro') {
         phase.value = 'player-turn'
         message.value = 'O que você vai fazer?'
+      }
+    }, 1400)
+  }
+
+  async function useMove(move) {
+    if (phase.value !== 'player-turn') return
+    phase.value = 'busy'
+
+    const enemyMove = chooseEnemyMove(state)
+    const order = turnOrder(state, move, enemyMove)
+
+    for (const turn of order) {
+      const up = upkeep(state, turn.key)
+      await play(up.events)
+      if (checkEnd()) return
+
+      if (up.canAct) {
+        const evs = performMove(state, turn.key, turn.move)
+        await play(evs)
+        if (checkEnd()) return
+      }
     }
 
-    async function flee() {
-        if (phase.value !== 'player-turn') return
-        phase.value = 'busy'
-        message.value = 'Tentando fugir...'
-        await delay(800)
-        phase.value = 'fled'
-        message.value = 'Você fugiu da batalha!'
-    }
+    phase.value = 'player-turn'
+    message.value = 'O que você vai fazer?'
+  }
 
-    return {
-        playerHp,
-        enemyHp,
-        phase,
-        message,
-        enemyHit,
-        playerHit,
-        isOver,
-        start,
-        useMove,
-        flee,
-    }
+  async function flee() {
+    if (phase.value !== 'player-turn') return
+    phase.value = 'busy'
+    message.value = 'Tentando fugir...'
+    await delay(800)
+    phase.value = 'fled'
+    message.value = 'Você fugiu da batalha!'
+  }
+
+  return {
+    playerHp,
+    enemyHp,
+    phase,
+    message,
+    enemyHit,
+    playerHit,
+    playerStatus,
+    enemyStatus,
+    isOver,
+    start,
+    useMove,
+    flee,
+  }
 }

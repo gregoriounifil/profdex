@@ -7,7 +7,15 @@ import BinaryTunnelScene from '../components/BinaryTunnelScene.vue'
 import { useBattle } from '../composables/useBattle.js'
 import { useArenaAR } from '../composables/useArenaAR.js'
 import { useProfessorsStore } from '../stores/professors'
-import { getMovesFor } from '../data/moves.js'
+import { buildMoveset } from '../data/moves.js'
+import {
+  typesForProfessor,
+  typeInfos,
+  PROFESSOR_TYPES,
+  PLAYER_KEY,
+} from '../data/professorTypes.js'
+
+const MAX_HP = 120
 
 const route = useRoute()
 const router = useRouter()
@@ -73,18 +81,30 @@ const enemyProfessor = computed(() => {
   )
 })
 
-const enemy = computed(() => ({
-  name: enemyProfessor.value.name,
-  maxHp: 60,
-  moves: getMovesFor(enemyProfessor.value),
-}))
+// ── Tipos dos combatentes ───────────────────────────────────────────────────
+// Jogador: controlamos o Gustavo (Arquitetura). Inimigo: tipos (1–2) do
+// professor vindo da rota, resolvidos pela planilha (fallback determinístico).
+const enemyProf = enemyProfessor.value
+const enemyTypes = typesForProfessor(enemyProf)
+const playerTypes = PROFESSOR_TYPES[PLAYER_KEY]
 
-const player = {
-  name: 'Você',
-  maxHp: 60,
+const enemyTypeIcons = typeInfos(enemyTypes).map((t) => t.icon).join('')
+const playerTypeIcons = typeInfos(playerTypes).map((t) => t.icon).join('')
+
+// Cada lado recebe um deck de 4 golpes, misturando seus tipos.
+const playerMoves = buildMoveset(playerTypes)
+const enemy = {
+  name: enemyProf.name,
+  types: enemyTypes,
+  maxHp: MAX_HP,
+  moves: buildMoveset(enemyTypes),
 }
-
-const playerMoves = getMovesFor(null)
+const player = {
+  name: 'Gustavo',
+  types: playerTypes,
+  maxHp: MAX_HP,
+  moves: playerMoves,
+}
 
 const {
   playerHp,
@@ -93,11 +113,13 @@ const {
   message,
   enemyHit,
   playerHit,
+  playerStatus,
+  enemyStatus,
   isOver,
   start,
   useMove,
   flee,
-} = useBattle({ player, enemy: enemy.value })
+} = useBattle({ player, enemy })
 
 onMounted(start)
 
@@ -221,24 +243,29 @@ function goBack() {
       </p>
 
       <!-- Barra do inimigo (topo esquerdo, como no esboço) -->
-      <!-- Nome fixo temporário; original: :name="`Prof. ${enemy.name}`" -->
       <BattleHpBar
         class="arena__enemy-bar"
-        name="Prof. Gustavo"
+        :name="`${enemyTypeInfo.icon} Prof. ${enemy.name}`"
         :hp="enemyHp"
         :max-hp="enemy.maxHp"
         :level="7"
         :avatar-src="`/professors/${enemyProfessor.slug}-cartoon.png`"
       />
+      <span v-if="enemyStatus" class="arena__status arena__status--enemy">
+        {{ enemyStatus }}
+      </span>
 
       <!-- Barra do jogador (acima do painel de comandos) -->
       <BattleHpBar
         class="arena__player-bar"
-        :name="player.name"
+        :name="`${playerTypeInfo.icon} ${player.name}`"
         :hp="playerHp"
         :max-hp="player.maxHp"
         :level="5"
       />
+      <span v-if="playerStatus" class="arena__status arena__status--player">
+        {{ playerStatus }}
+      </span>
 
       <!-- Painel de comandos: mensagem + golpes + fugir -->
       <section class="battle-panel" aria-label="Comandos de batalha">
@@ -255,7 +282,7 @@ function goBack() {
             @click="useMove(move)"
           >
             <span class="pixel move-btn__name">{{ move.name }}</span>
-            <span class="pixel move-btn__meta">PWR {{ move.power }}</span>
+            <span class="pixel move-btn__meta">{{ move.raw }}</span>
           </button>
         </div>
 
@@ -532,6 +559,30 @@ function goBack() {
   left: 12px;
   bottom: 256px;
   max-width: 58%;
+}
+
+/* Chip de status (Travado/Confuso/Queimando) junto de cada barra */
+.arena__status {
+  position: absolute;
+  z-index: 2;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--error);
+  color: var(--error);
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.arena__status--enemy {
+  top: calc(58px + env(safe-area-inset-top));
+  left: 12px;
+}
+
+.arena__status--player {
+  left: 12px;
+  bottom: 232px;
 }
 
 /* Painel inferior: mensagem + grid 2x2 + fugir */
