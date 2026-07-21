@@ -13,11 +13,12 @@
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
+    "@google/model-viewer": "^4.3.1",
     "@tresjs/cientos": "^5.8.1",
     "@tresjs/core": "^5.8.3",
     "axios": "^1.16.0",
     "pinia": "^3.0.4",
-    "three": "^0.185.1",
+    "three": "^0.183.2",
     "vue": "^3.5.32",
     "vue-router": "^5.0.4"
   },
