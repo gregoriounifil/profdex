@@ -55,7 +55,7 @@ onMounted(() => {
       <div>
         <span class="pixel eyebrow">VISUALIZADOR AR</span>
         <!-- <h1>Prof. {{ character.name }}</h1>!-> -->
-        <h1>Prof. Gustvão</h1>
+        <h1>Prof. Gustavão</h1>
       </div>
     </header>
 

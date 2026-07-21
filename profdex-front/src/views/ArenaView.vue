@@ -1,8 +1,9 @@
 <script setup>
 import '@google/model-viewer'
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BattleHpBar from '../components/BattleHpBar.vue'
+import BinaryTunnelScene from '../components/BinaryTunnelScene.vue'
 import { useBattle } from '../composables/useBattle.js'
 import { useProfessorsStore } from '../stores/professors'
 import { getMovesFor } from '../data/moves.js'
@@ -14,6 +15,53 @@ const store = useProfessorsStore()
 onMounted(() => {
   if (!store.professors.length) store.fetch().catch(() => {})
 })
+
+// ── Realidade aumentada: fundo é a câmera (padrão). Ao desligar, o combate
+// acontece dentro do cenário do túnel binário. ────────────────────────────
+const arEnabled = ref(true)
+const arError = ref(null)
+const camVideo = useTemplateRef('camVideo')
+let camStream = null
+
+async function startCamera() {
+  arError.value = null
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } },
+      audio: false,
+    })
+    const v = camVideo.value
+    if (v) {
+      v.srcObject = camStream
+      v.setAttribute('playsinline', '')
+      v.muted = true
+      await v.play()
+    }
+  } catch (e) {
+    // Sem câmera/permissão: cai para o cenário 3D em vez de travar o combate.
+    arError.value = e?.message ?? 'Câmera indisponível'
+    arEnabled.value = false
+  }
+}
+
+function stopCamera() {
+  if (camStream) {
+    camStream.getTracks().forEach((t) => t.stop())
+    camStream = null
+  }
+  if (camVideo.value) camVideo.value.srcObject = null
+}
+
+async function toggleAR() {
+  arEnabled.value = !arEnabled.value
+  if (arEnabled.value) await startCamera()
+  else stopCamera()
+}
+
+onMounted(() => {
+  if (arEnabled.value) startCamera()
+})
+onUnmounted(stopCamera)
 
 // Professor inimigo: vem da rota (/arena/:id) com fallback para o modelo padrão
 const enemyProfessor = computed(() => {
@@ -67,19 +115,30 @@ function goBack() {
 <template>
   <main class="arena">
     <!-- Palco: inimigo ao fundo (de frente) e jogador em primeiro plano (de costas) -->
-    <div class="arena__stage">
+    <div class="arena__stage" :class="{ 'arena__stage--ar': arEnabled }">
+      <!-- Fundo do combate: câmera (AR) ou o cenário do túnel binário -->
+      <video
+        v-show="arEnabled"
+        ref="camVideo"
+        class="arena__camera"
+        autoplay
+        playsinline
+        muted
+      />
+      <BinaryTunnelScene v-if="!arEnabled" class="arena__scenario" :speed="4" />
+
       <model-viewer
         class="arena__model arena__model--enemy"
         :class="{ 'arena__model--hit': enemyHit }"
         :src="enemyModelSrc"
         :alt="`Prof. ${enemyProfessor.name} em batalha`"
-        camera-orbit="-15deg 86deg 105%"
+        camera-orbit="-10deg 86deg 95%"
         interaction-prompt="none"
         disable-zoom
         disable-tap
         disable-pan
         shadow-intensity="1"
-        shadow-softness="0.8"
+        shadow-softness="1"
         exposure="1"
       />
       <model-viewer
@@ -101,6 +160,21 @@ function goBack() {
     <!-- HUD sobreposto ao palco -->
     <div class="arena__hud" :class="{ 'arena__hud--player-hit': playerHit }">
       <button class="arena__back" type="button" @click="goBack">←</button>
+
+      <!-- Botão de canto: liga/desliga a realidade aumentada -->
+      <button
+        class="arena__ar-toggle"
+        :class="{ 'arena__ar-toggle--on': arEnabled }"
+        type="button"
+        :aria-pressed="arEnabled"
+        @click="toggleAR"
+      >
+        <span class="arena__ar-dot" aria-hidden="true" />
+        {{ arEnabled ? 'AR ligada' : 'Cenário 3D' }}
+      </button>
+      <p v-if="arError && !arEnabled" class="arena__ar-note" role="status">
+        Sem câmera — usando o cenário 3D
+      </p>
 
       <!-- Barra do inimigo (topo esquerdo, como no esboço) -->
       <BattleHpBar
@@ -171,6 +245,10 @@ function goBack() {
 .arena__stage {
   position: absolute;
   inset: 0;
+  /* z-index explícito -> a etapa vira um contexto de empilhamento próprio,
+    prendendo os modelos (z-index:1) abaixo do HUD (z-index:2). Assim os
+    bonecos nunca cobrem os botões/textos. */
+  z-index: 0;
   /* Piso da arena: gradiente sutil para dar profundidade */
   background:
     radial-gradient(ellipse 65% 18% at 32% 42%, rgba(237, 175, 104, 0.12), transparent),
@@ -178,26 +256,49 @@ function goBack() {
     linear-gradient(180deg, var(--bg-deep) 0%, #1a1e26 55%, var(--bg-deep) 100%);
 }
 
+/* No modo AR o gradiente some para a câmera aparecer limpa */
+.arena__stage--ar {
+  background: #000;
+}
+
+/* Camada de fundo: feed da câmera (AR) */
+.arena__camera {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+/* Camada de fundo: cenário do túnel binário (AR desligada) */
+.arena__scenario {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
 /* Modelos 3D estáticos: sem rotação nem zoom (câmera travada) */
 .arena__model {
   position: absolute;
+  z-index: 1;
   pointer-events: none;
   --poster-color: transparent;
   --progress-bar-color: var(--unifil-gold);
 }
 
-/* Inimigo: ao fundo, à esquerda, de frente (levemente virado para o jogador) */
+/* Inimigo: mais ao centro e menor -> parece mais fundo no túnel (perspectiva) */
 .arena__model--enemy {
-  top: 14%;
-  left: -4%;
-  width: 68%;
-  height: 42%;
+  top: 24%;
+  left: 10%;
+  width: 50%;
+  height: 34%;
 }
 
-/* Jogador: em primeiro plano, à direita, de costas para nós */
+/* Jogador: em primeiro plano, à direita, de costas — abaixado (mais para baixo) */
 .arena__model--player {
   right: -10%;
-  bottom: 150px;
+  bottom: 17%;
   width: 88%;
   height: 50%;
 }
@@ -211,6 +312,7 @@ function goBack() {
 .arena__hud {
   position: absolute;
   inset: 0;
+  z-index: 2; /* acima do palco (z-index:0) e dos modelos -> botões/textos na frente */
   display: flex;
   flex-direction: column;
   pointer-events: none;
@@ -241,6 +343,56 @@ function goBack() {
   color: var(--text);
   border: 1px solid var(--border);
   font-size: 18px;
+}
+
+/* Botão de canto para alternar AR (abaixo do voltar) */
+.arena__ar-toggle {
+  position: absolute;
+  top: calc(58px + env(safe-area-inset-top));
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 100px;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.arena__ar-toggle--on {
+  border-color: var(--ds-blue);
+  color: var(--ds-blue-glow);
+}
+
+.arena__ar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.arena__ar-toggle--on .arena__ar-dot {
+  background: var(--ds-blue-glow);
+  box-shadow: 0 0 8px var(--ds-blue-glow);
+}
+
+.arena__ar-note {
+  position: absolute;
+  top: calc(100px + env(safe-area-inset-top));
+  right: 12px;
+  max-width: 60%;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.4;
+  text-align: right;
 }
 
 .arena__enemy-bar {

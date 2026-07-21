@@ -1,8 +1,6 @@
 <script setup>
 import { useRouter } from 'vue-router'
-import { TresCanvas } from '@tresjs/core'
-import { OrbitControls } from '@tresjs/cientos'
-import BinaryTunnel from '@/components/BinaryTunnel.vue'
+import BinaryTunnelScene from '@/components/BinaryTunnelScene.vue'
 
 const router = useRouter()
 </script>
@@ -20,12 +18,7 @@ const router = useRouter()
     </header>
 
     <section class="stage-panel">
-      <TresCanvas clear-color="#08000f" :dpr="[1, 2]">
-        <!-- Câmera na boca do túnel, olhando para o ponto de fuga -->
-        <TresPerspectiveCamera :position="[0, 0, 8]" :fov="72" :look-at="[0, 0, -50]" />
-        <OrbitControls :target="[0, 0, -50]" :enable-damping="true" :enable-pan="false" />
-        <BinaryTunnel :speed="7" color="#ff2bc4" />
-      </TresCanvas>
+      <BinaryTunnelScene :speed="7" color="#ff2bc4" :controls="true" />
     </section>
 
     <p class="hint">
