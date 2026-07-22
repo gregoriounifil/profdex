@@ -1,6 +1,10 @@
 # Contexto — Sistema de Batalha (RPG de turnos em AR)
 
-Documento para retomar o desenvolvimento da batalha. Última atualização: 2026-07-20.
+Documento para retomar o desenvolvimento da batalha. Última atualização: 2026-07-21.
+
+> Atualizado após os commits `56266cf (AR positioning in battle)` e
+> `ffdd103 (implementation of types and movesets)`, que substituíram o movepool
+> placeholder por um sistema real de **tipos + movesets + motor de batalha**.
 
 ## Visão geral
 
@@ -46,25 +50,58 @@ Prisma de SQLite para **PostgreSQL**. Consequências para rodar local:
 | Arquivo | Papel |
 |---|---|
 | `profdex-front/src/views/ArenaView.vue` | A tela de combate: palco 3D + HUD + comandos. |
-| `profdex-front/src/composables/useBattle.js` | Máquina de turnos (estado + regras), sem UI. |
+| `profdex-front/src/composables/battleEngine.js` | **Motor puro** de combate (sem Vue): combatentes, status, ordem de turno, resolução de golpes, IA do inimigo. |
+| `profdex-front/src/composables/useBattle.js` | Camada reativa: envolve o motor com refs do Vue e anima a fila de eventos. |
+| `profdex-front/src/data/types.js` | **Roda de tipos** (9 tipos) e cálculo de efetividade (2×/½×/…). |
+| `profdex-front/src/data/moves.js` | **Movepool real por tipo** (categorias + efeitos). |
 | `profdex-front/src/components/BattleHpBar.vue` | Barra de HP reutilizável (inimigo e jogador). |
-| `profdex-front/src/data/moves.js` | **Tabela de golpes (placeholder).** Ver abaixo. |
 | `profdex-front/src/router/index.js` | Rota `/arena/:id` (name `arena`). |
-| `profdex-front/src/views/BatalhaView.vue` | Menu; `goToArena()` navega para a arena. |
+| `profdex-front/src/views/BatalhaView.vue` | Menu; `goToArena()` navega para a arena. Também tem `BattleGuideView` (`/batalha/guia`) com o guia de tipos. |
 
 O `ARViewer.vue` / `useModelViewer.js` NÃO são usados na arena (só na tela
-"Ver Prof." / `CharacterARView`). A arena instancia `<model-viewer>` direto.
+"Ver Prof." / `CharacterARView`). A arena instancia `<model-viewer>` direto e usa
+o composable `useArenaAR.js` para o posicionamento em AR.
 
 ## Como a batalha funciona hoje
 
-### Máquina de turnos (`useBattle.js`)
-- Estado reativo: `playerHp`, `enemyHp`, `phase`, `message`, `enemyHit`, `playerHit`, `isOver`.
-- Fases: `intro` → `player-turn` → `busy` (animações + turno inimigo) → volta a
-  `player-turn`, terminando em `victory` | `defeat` | `fled`.
-- `useMove(move)`: aplica o golpe do jogador, checa vitória, depois o inimigo
-  escolhe um golpe aleatório e revida, checa derrota.
-- Dano = `power` × variação aleatória de ±20%; `accuracy` decide se erra.
-- `flee()` encerra a batalha.
+Arquitetura em duas camadas: **motor puro** (`battleEngine.js`, testável, sem Vue)
++ **camada reativa** (`useBattle.js`, refs do Vue + timing das animações).
+
+### Motor (`battleEngine.js`)
+- `createCombatant({ name, type/types, maxHp, moves })` — HP padrão `DEFAULT_MAX_HP` = **120**.
+- `turnOrder` (quem age primeiro), `upkeep` (status no início do turno:
+  paralisia pode travar, veneno/DOT causa dano, etc.), `performMove` (resolve um
+  golpe: dano, efetividade de tipo, efeitos, cura, buffs/debuffs, escudos),
+  `chooseEnemyMove` (IA simples do inimigo).
+- `performMove`/`upkeep` retornam uma **fila de eventos** (`message`, `damage`,
+  `heal`, `status`, `effectiveness`, `faint`) — a UI só reproduz a fila.
+- `STATUS` e efeitos (`EFFECT` em `moves.js`): paralisia, confusão, DOT, recuo,
+  multi-hit, ignora defesa, buffs/debuffs de atributo, escudos, cura, etc.
+
+### Camada reativa (`useBattle.js`)
+- Estado reativo: `playerHp`, `enemyHp`, `phase`, `message`, `enemyHit`,
+  `playerHit`, `playerStatus`, `enemyStatus`, `isOver`.
+- Fases: `intro` → `player-turn` → `busy` (resolução) → `player-turn`,
+  terminando em `victory` | `defeat` | `fled`.
+- `useMove(move)`: monta a ordem do turno, roda `upkeep` + `performMove` de cada
+  lado pelo motor e **anima a fila de eventos** (dano, cura, mensagens de
+  efetividade). `flee()` encerra a batalha.
+
+### Tipos (`types.js`)
+- `TYPE_CYCLE`: 9 tipos temáticos (Lógica, Cálculo, IA/ML, Robótica, Arquitetura,
+  NPI, Redes, Banco de Dados, Algoritmos), dispostos numa **roda**.
+- Regra: cada tipo é super-eficaz (2×) contra os **2 seguintes** e fraco (½×)
+  contra os **2 anteriores** — forte/fraco são derivados da ordem, não digitados.
+- `typeIdFromSeed(slug/id/nome)`: deriva um tipo **determinístico** por professor
+  (mesmo prof → mesmo tipo), já que a API pode não trazer `type`.
+- `typeMultiplier` combina em 4×/2×/1×/½×/¼× para defensores de 1 ou 2 tipos.
+
+### Movepool (`moves.js`)
+- `MOVES_BY_TYPE`: golpes por tipo, cada um com `category` (ataque/defesa/buff/
+  debuff/status/cura), `power`, `accuracy`, `effects[]` e texto de sabor (`raw`
+  = matéria real da grade). Índices prontos: `MOVE_BY_ID`, `ALL_MOVES`.
+- `buildMoveset(types, size = 4)`: monta o conjunto de 4 golpes de um combatente a
+  partir do(s) tipo(s) — é o que `ArenaView.vue` usa para jogador e inimigo.
 
 ### Tela (`ArenaView.vue`)
 - **Palco**: dois `<model-viewer>` estáticos (sem `camera-controls`, sem
@@ -80,23 +117,9 @@ O `ARViewer.vue` / `useModelViewer.js` NÃO são usados na arena (só na tela
 
 ### Modelo 3D
 - Por enquanto **os dois lados usam o mesmo GLB** (`/models/seu-modelo-mobile.glb`,
-  ~12,8 MB): `playerModelSrc = enemyModelSrc`. Duplicata proposital até o jogador
-  ter modelo próprio.
-- HP fixo em 60 para ambos.
-
-## Tabela de golpes — o principal "próximo passo"
-
-`data/moves.js` é **placeholder**. Formato de um golpe:
-```js
-{ id, name, power, accuracy /* 0..1 */, description }
-```
-- `DEFAULT_MOVES`: 4 golpes genéricos usados hoje por jogador e inimigo.
-- `MOVES_BY_SLUG`: mapa vazio para golpes por professor.
-- `getMovesFor(professor)` retorna os golpes do slug ou o default.
-
-**Quando as tabelas reais de movimentos e ataques chegarem**: substituir o
-conteúdo aqui mantendo o formato. Se as tabelas tiverem tipos/fraquezas, ajustar
-também o cálculo de dano em `useBattle.js` (`rollDamage`).
+  ~12,8 MB). Duplicata proposital até o jogador ter modelo próprio.
+- O tipo de cada combatente é derivado do professor via `typeIdFromSeed`, e o
+  moveset via `buildMoveset` — então já variam por professor mesmo sem campo na API.
 
 ## Limitações conhecidas / decisões em aberto
 
@@ -104,16 +127,17 @@ também o cálculo de dano em `useBattle.js` (`rollDamage`).
    AR nativa (Scene Viewer/Quick Look), e o HUD da página some dentro dela. Uma
    batalha com os dois bonecos sobre a câmera exige **WebXR + DOM overlay**
    (Android/Chrome; iOS não suporta). Por isso a arena hoje é 3D na tela, não AR.
-2. **HP e golpes por professor** ainda não existem — tudo fixo/genérico.
-3. **Ângulos dos modelos** foram calibrados "no olho"; podem precisar de ajuste
+2. **Ângulos dos modelos** foram calibrados "no olho"; podem precisar de ajuste
    fino no dispositivo real (mexer em `camera-orbit` e no CSS `.arena__model--*`).
-4. O preview em navegador de desenvolvimento não renderiza o GLB pesado (WebGL por
+   Lembrete: **não fixar `field-of-view`** — quebra o auto-enquadramento e corta o modelo.
+3. O preview em navegador de desenvolvimento não renderiza o GLB pesado (WebGL por
    software trava); testar 3D no celular.
+4. **Dados do combate ainda não persistem no backend** — HP/nível/tipo do professor
+   não vêm da API (derivados no front). Integrar quando o back expuser esses campos.
 
 ## Ideias de continuação
 
-- Plugar tabelas reais de movimentos/ataques em `moves.js`.
-- HP, nível e golpes por professor (usar `MOVES_BY_SLUG` + campos do backend).
+- Expor tipo/nível/HP do professor pela API e consumir no lugar dos derivados.
 - Tela de vitória com recompensa (captura, XP).
-- Sistema de tipos/fraquezas no cálculo de dano.
+- Balancear `power`/`accuracy`/efeitos do movepool com playtesting.
 - Avaliar WebXR para a batalha acontecer sobre a câmera.

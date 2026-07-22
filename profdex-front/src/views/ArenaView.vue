@@ -25,9 +25,10 @@ onMounted(() => {
   if (!store.professors.length) store.fetch().catch(() => {})
 })
 
-// ── Realidade aumentada: fundo é a câmera (padrão). Ao desligar, o combate
-// acontece dentro do cenário do túnel binário. ────────────────────────────
-const arEnabled = ref(true)
+// ── Realidade aumentada: DESATIVADA por enquanto. O combate acontece sempre
+// dentro do cenário do túnel binário (câmera/AR desligada). Para reativar,
+// volte `arEnabled` para `true` e restaure o botão de alternar no template.
+const arEnabled = ref(false)
 const arError = ref(null)
 const camVideo = useTemplateRef('camVideo')
 let camStream = null
@@ -59,12 +60,6 @@ function stopCamera() {
     camStream = null
   }
   if (camVideo.value) camVideo.value.srcObject = null
-}
-
-async function toggleAR() {
-  arEnabled.value = !arEnabled.value
-  if (arEnabled.value) await startCamera()
-  else stopCamera()
 }
 
 onMounted(() => {
@@ -207,21 +202,6 @@ function goBack() {
     <div class="arena__hud" :class="{ 'arena__hud--player-hit': playerHit }">
       <button class="arena__back" type="button" @click="goBack">←</button>
 
-      <!-- Botão de canto: liga/desliga a realidade aumentada -->
-      <button
-        class="arena__ar-toggle"
-        :class="{ 'arena__ar-toggle--on': arEnabled }"
-        type="button"
-        :aria-pressed="arEnabled"
-        @click="toggleAR"
-      >
-        <span class="arena__ar-dot" aria-hidden="true" />
-        {{ arEnabled ? 'Desativar AR' : 'Ativar AR' }}
-      </button>
-      <p v-if="arError && !arEnabled" class="arena__ar-note" role="status">
-        Sem câmera — usando o cenário 3D
-      </p>
-
       <!-- AR ancorado (WebXR): joga os dois lutadores no chão a 1,7 m -->
       <button
         v-if="arSupport === 'supported'"
@@ -231,13 +211,7 @@ function goBack() {
       >
         Ver batalha em AR
       </button>
-      <p
-        v-else-if="arSupport === 'unsupported'"
-        class="arena__ar-note arena__ar-note--xr"
-        role="status"
-      >
-        AR ancorado indisponível neste aparelho
-      </p>
+      
       <p v-if="xrError" class="arena__ar-note arena__ar-note--xr" role="status">
         {{ xrError }}
       </p>
@@ -245,7 +219,7 @@ function goBack() {
       <!-- Barra do inimigo (topo esquerdo, como no esboço) -->
       <BattleHpBar
         class="arena__enemy-bar"
-        :name="`${enemyTypeInfo.icon} Prof. ${enemy.name}`"
+        :name="`${enemyTypeIcons} Prof. ${enemy.name}`"
         :hp="enemyHp"
         :max-hp="enemy.maxHp"
         :level="7"
@@ -258,7 +232,7 @@ function goBack() {
       <!-- Barra do jogador (acima do painel de comandos) -->
       <BattleHpBar
         class="arena__player-bar"
-        :name="`${playerTypeInfo.icon} ${player.name}`"
+        :name="`${playerTypeIcons} ${player.name}`"
         :hp="playerHp"
         :max-hp="player.maxHp"
         :level="5"

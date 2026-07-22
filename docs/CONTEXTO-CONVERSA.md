@@ -11,12 +11,12 @@ Este arquivo é o registro **do que aconteceu nesta conversa**.
 ### 1. Criar a tela de batalha (RPG de turnos em AR) a partir de um esboço
 Esboço: inimigo ao fundo, personagem do jogador, HUD com grid 2×2 de golpes e "Fugir".
 Entregue (tudo já commitado):
-- `profdex-front/src/data/moves.js` — tabela de golpes **placeholder** (4 golpes
-  genéricos). Formato `{ id, name, power, accuracy, description }`. As tabelas reais
-  de movimentos/ataques ainda **não** foram integradas (decisão do usuário de deixar
-  para depois).
+- `profdex-front/src/data/moves.js` — inicialmente uma **tabela de golpes
+  placeholder** (4 golpes genéricos), deixada para receber as tabelas reais depois.
+  → **Já substituída** pelo movepool real; ver seção "Trabalho paralelo do time".
 - `profdex-front/src/composables/useBattle.js` — máquina de turnos (HP, fases,
   dano ±20%, accuracy, turno do inimigo, fugir). Sem acoplamento com UI.
+  → Depois **reescrita** pelo time para envolver o motor puro `battleEngine.js`.
 - `profdex-front/src/components/BattleHpBar.vue` — barra de HP estilo Pokémon.
 - `profdex-front/src/views/ArenaView.vue` — a tela de combate.
 - Rota `/arena/:id` (name `arena`) em `router/index.js`; botão "Batalha" do
@@ -65,11 +65,19 @@ Percebido no repo, não feito por esta sessão — não mexer sem alinhar:
 - Deploy: **Railway** (back) + **Vercel** (front); commits de deps e Prisma Postgres.
 - Novas telas/rotas: `BattleGuideView` (`/batalha/guia`, guia de tipos/instruções),
   `TresDemoView` (`/tres-demo`), `BinaryTunnelView` (`/tunel-binario`).
-- Arquivos do usuário ainda não commitados: `docs/CENARIO-3D-E-AR.md`,
-  `docs/HANDOFF-DEPLOY-RAILWAY-VERCEL.md`, `profdex-front/src/composables/useArenaAR.js`.
+- Docs do usuário: `docs/CENARIO-3D-E-AR.md`, `docs/HANDOFF-DEPLOY-RAILWAY-VERCEL.md`;
+  composable `useArenaAR.js` (posicionamento AR na arena).
+- **Sistema de tipos + movesets + motor de batalha** (commit
+  `ffdd103 feat: implementation of types and movesets`): substituiu o `moves.js`
+  placeholder por um **movepool real por tipo** (`data/moves.js`), adicionou a roda
+  de tipos (`data/types.js`) e o **motor puro** `composables/battleEngine.js`, e
+  reescreveu `useBattle.js` para envolver esse motor. Detalhes em [BATALHA.md](BATALHA.md).
+- **Posicionamento AR na batalha** (commit `56266cf feat: AR positioning in battle`):
+  incorporou os ajustes de enquadramento dos modelos + `useArenaAR.js`.
 
 ## Próximos passos sugeridos
 1. Resolver o banco (Postgres vs SQLite) para o backend voltar a subir.
-2. Commitar os ajustes de enquadramento em `ArenaView.vue` (passo 4).
-3. Integrar as tabelas reais de movimentos/ataques em `moves.js`.
-4. HP/golpes por professor; tela de vitória/recompensa.
+2. Expor tipo/nível/HP do professor pela API (hoje derivados no front via
+   `typeIdFromSeed`/`buildMoveset`).
+3. Tela de vitória/recompensa (captura, XP).
+4. Balancear o movepool (power/accuracy/efeitos) com playtesting.
