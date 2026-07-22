@@ -1,11 +1,12 @@
 <script setup>
 import '@google/model-viewer'
-import { computed, onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
+import { onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BattleHpBar from '../components/BattleHpBar.vue'
 import BinaryTunnelScene from '../components/BinaryTunnelScene.vue'
 import { useBattle } from '../composables/useBattle.js'
 import { useArenaAR } from '../composables/useArenaAR.js'
+import { pollARSupport } from '../composables/useModelViewer.js'
 import { useProfessorsStore } from '../stores/professors'
 import { buildMoveset } from '../data/moves.js'
 import {
@@ -21,9 +22,18 @@ const route = useRoute()
 const router = useRouter()
 const store = useProfessorsStore()
 
-onMounted(() => {
-  if (!store.professors.length) store.fetch().catch(() => {})
-})
+// Professor inimigo: resolvido pelo parâmetro da rota (/arena/:id), que aceita
+// o UUID do banco, o slug (/arena/eron) ou o slug com prefixo (/arena/prof-eron).
+// O `beforeEnter` da rota já carregou a lista, então dá para resolver aqui no
+// setup — a batalha inteira (tipos, golpes, modelo) deriva deste objeto, e por
+// isso ele precisa estar correto ANTES de useBattle() montar os combatentes.
+// Fallbacks: o state da navegação e, por fim, o modelo padrão.
+const enemyProfessor = store.findByKey(route.params.id) ||
+  window.history.state?.character || {
+    id: 'modelo-padrao',
+    name: 'Professor',
+    slug: 'professor',
+  }
 
 // ── Realidade aumentada: fundo é a câmera (padrão). Ao desligar, o combate
 // acontece dentro do cenário do túnel binário. ────────────────────────────
@@ -72,20 +82,10 @@ onMounted(() => {
 })
 onUnmounted(stopCamera)
 
-// Professor inimigo: vem da rota (/arena/:id) com fallback para o modelo padrão
-const enemyProfessor = computed(() => {
-  const id = route.params.id
-  return (
-    store.professors.find((p) => String(p.id) === String(id)) ||
-    window.history.state?.character || { id: 'modelo-padrao', name: 'Professor', slug: 'professor' }
-  )
-})
-
 // ── Tipos dos combatentes ───────────────────────────────────────────────────
 // Jogador: controlamos o Gustavo (Arquitetura). Inimigo: tipos (1–2) do
 // professor vindo da rota, resolvidos pela planilha (fallback determinístico).
-const enemyProf = enemyProfessor.value
-const enemyTypes = typesForProfessor(enemyProf)
+const enemyTypes = typesForProfessor(enemyProfessor)
 const playerTypes = PROFESSOR_TYPES[PLAYER_KEY]
 
 const enemyTypeIcons = typeInfos(enemyTypes).map((t) => t.icon).join('')
@@ -94,7 +94,7 @@ const playerTypeIcons = typeInfos(playerTypes).map((t) => t.icon).join('')
 // Cada lado recebe um deck de 4 golpes, misturando seus tipos.
 const playerMoves = buildMoveset(playerTypes)
 const enemy = {
-  name: enemyProf.name,
+  name: enemyProfessor.name,
   types: enemyTypes,
   maxHp: MAX_HP,
   moves: buildMoveset(enemyTypes),
@@ -125,9 +125,7 @@ onMounted(start)
 
 // Por enquanto os dois lados usam o mesmo modelo (duplicata);
 // depois o jogador terá o próprio modelo/professor capturado.
-const enemyModelSrc = computed(
-  () => enemyProfessor.value.modelUrl || '/models/seu-modelo-mobile.glb'
-)
+const enemyModelSrc = enemyProfessor.modelUrl || '/models/seu-modelo-mobile.glb'
 const playerModelSrc = enemyModelSrc
 
 // ── AR ancorado (WebXR): coloca os dois lutadores a 1,7 m no plano detectado.
@@ -147,14 +145,51 @@ onMounted(checkSupport)
 
 function launchAR() {
   enterAR({
-    enemySrc: enemyModelSrc.value,
-    playerSrc: playerModelSrc.value,
+    enemySrc: enemyModelSrc,
+    playerSrc: playerModelSrc,
     overlay: arOverlay.value,
   })
 }
 
+// ── AR no iOS: Quick Look via model-viewer ──────────────────────────────────
+// O Safari não implementa WebXR, então `useArenaAR` sempre reporta
+// 'unsupported' no iPhone e o botão acima nunca aparecia — a arena ficava sem
+// nenhum caminho de AR. O model-viewer cobre esse caso pelo AR Quick Look da
+// Apple: com `ar` + `ar-modes` incluindo `quick-look`, ele gera o USDZ a partir
+// do próprio GLB (nenhum .usdz precisa ser publicado em /public/models).
+// `ios-src` só seria necessário em navegadores iOS de terceiros (Chrome/Firefox),
+// que não recebem o USDZ gerado em runtime.
+const enemyViewer = useTemplateRef('enemyViewer')
+const quickLookReady = ref(false)
+const quickLookError = ref(null)
+let stopQuickLookPolling = null
+
+// `canActivateAR` só fica confiável alguns frames depois do `load`, porque o
+// model-viewer sonda o WebXR antes de cair para o Quick Look.
+function refreshQuickLook() {
+  stopQuickLookPolling?.()
+  stopQuickLookPolling = pollARSupport(
+    () => enemyViewer.value,
+    (supported) => {
+      quickLookReady.value = supported
+    },
+  )
+}
+
+async function launchQuickLook() {
+  quickLookError.value = null
+  try {
+    // Precisa sair do gesto do usuário: o Quick Look abre via <a> nativo.
+    await enemyViewer.value?.activateAR()
+  } catch (e) {
+    quickLookError.value = e?.message ?? 'Não foi possível abrir o AR.'
+  }
+}
+
+onUnmounted(() => stopQuickLookPolling?.())
+
 function goBack() {
-  router.push({ name: 'batalha', query: { profId: enemyProfessor.value.id } })
+  router.push({ name: 'batalha', query: { profId: enemyProfessor.id } })
 }
 </script>
 
@@ -173,7 +208,11 @@ function goBack() {
       />
       <BinaryTunnelScene v-if="!arEnabled" class="arena__scenario" :speed="4" />
 
+      <!-- O modelo do inimigo também é a fonte do AR Quick Look (iOS): `ar`
+           habilita a seleção de modo e o botão nativo fica oculto por CSS
+           (--ar-button-display), já que quem dispara é o botão do HUD. -->
       <model-viewer
+        ref="enemyViewer"
         class="arena__model arena__model--enemy"
         :class="{ 'arena__model--hit': enemyHit }"
         :src="enemyModelSrc"
@@ -186,6 +225,12 @@ function goBack() {
         shadow-intensity="1"
         shadow-softness="1"
         exposure="1"
+        ar
+        ar-modes="webxr scene-viewer quick-look"
+        ar-placement="floor"
+        ar-scale="auto"
+        ar-usdz-max-texture-size="2048"
+        @load="refreshQuickLook"
       />
       <model-viewer
         class="arena__model arena__model--player"
@@ -231,21 +276,34 @@ function goBack() {
       >
         Ver batalha em AR
       </button>
+      <!-- Sem WebXR (iOS): AR Quick Look com o modelo do inimigo -->
+      <button
+        v-else-if="quickLookReady"
+        class="arena__ar-real"
+        type="button"
+        @click="launchQuickLook"
+      >
+        Ver em AR
+      </button>
       <p
         v-else-if="arSupport === 'unsupported'"
         class="arena__ar-note arena__ar-note--xr"
         role="status"
       >
-        AR ancorado indisponível neste aparelho
+        AR indisponível neste aparelho
       </p>
-      <p v-if="xrError" class="arena__ar-note arena__ar-note--xr" role="status">
-        {{ xrError }}
+      <p
+        v-if="xrError || quickLookError"
+        class="arena__ar-note arena__ar-note--xr"
+        role="status"
+      >
+        {{ xrError || quickLookError }}
       </p>
 
       <!-- Barra do inimigo (topo esquerdo, como no esboço) -->
       <BattleHpBar
         class="arena__enemy-bar"
-        :name="`${enemyTypeInfo.icon} Prof. ${enemy.name}`"
+        :name="`${enemyTypeIcons} Prof. ${enemy.name}`"
         :hp="enemyHp"
         :max-hp="enemy.maxHp"
         :level="7"
@@ -258,7 +316,7 @@ function goBack() {
       <!-- Barra do jogador (acima do painel de comandos) -->
       <BattleHpBar
         class="arena__player-bar"
-        :name="`${playerTypeInfo.icon} ${player.name}`"
+        :name="`${playerTypeIcons} ${player.name}`"
         :hp="playerHp"
         :max-hp="player.maxHp"
         :level="5"
@@ -368,6 +426,9 @@ function goBack() {
   pointer-events: none;
   --poster-color: transparent;
   --progress-bar-color: var(--unifil-gold);
+  /* O botão nativo de AR do model-viewer não cabe no HUD da arena: quem
+     dispara o Quick Look é o botão "Ver em AR" acima. */
+  --ar-button-display: none;
 }
 
 /* Inimigo: mais ao centro e menor -> parece mais fundo no túnel (perspectiva) */
