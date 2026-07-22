@@ -102,6 +102,15 @@ const router = createRouter({
       props: true,
       beforeEnter: preloadProfessors,
     },
+    {
+      // Ficha do professor (aberta ao clicar no ícone de um professor liberado)
+      path: '/professor/:id',
+      name: 'professor',
+      component: () => import('../views/ProfessorView.vue'),
+      meta: { auth: true },
+      props: true,
+      beforeEnter: preloadProfessors,
+    },
   ],
 })
 

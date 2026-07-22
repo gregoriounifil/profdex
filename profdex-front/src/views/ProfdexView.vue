@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import ProfCard from '../components/ProfCard.vue'
 import { useAuthStore } from '../stores/auth.js'
@@ -9,13 +9,31 @@ const router = useRouter()
 const auth = useAuthStore()
 const store = useProfessorsStore()
 
-onMounted(() => store.fetch())
+// Sinaliza falha ao buscar a lista (ex.: back-end fora do ar). Sem isso, um erro
+// de rede deixava a grade silenciosamente vazia — como se não houvesse nenhum
+// professor cadastrado.
+const loadError = ref(false)
+
+async function load() {
+  loadError.value = false
+  try {
+    await store.fetch()
+  } catch {
+    loadError.value = true
+  }
+}
+
+onMounted(load)
 
 const captured = computed(() => store.professors.filter((p) => p.captured).length)
 const total = computed(() => store.professors.length)
 
-function goBattle(prof) {
-  router.push({ name: 'batalha', query: { profId: prof.id } })
+function goDetails(prof) {
+  router.push({
+    name: 'professor',
+    params: { id: prof.id },
+    state: { character: { ...prof } },
+  })
 }
 </script>
 
@@ -53,13 +71,24 @@ function goBattle(prof) {
         <span class="pixel" style="font-size: 8px">Carregando...</span>
       </div>
 
+      <div v-else-if="loadError && !store.professors.length" class="error-state">
+        <span class="error-state__icon pixel" aria-hidden="true">!</span>
+        <p class="pixel error-state__title">SEM CONEXÃO</p>
+        <p class="error-state__copy">
+          Não foi possível carregar os professores. Verifique se o servidor está no ar.
+        </p>
+        <button class="btn btn-primary error-state__retry" type="button" @click="load">
+          <span class="pixel">TENTAR NOVAMENTE</span>
+        </button>
+      </div>
+
       <div v-else class="grid">
         <ProfCard
           v-for="(prof, i) in store.professors"
           :key="prof.id"
           :professor="prof"
           :index="i"
-          @battle="goBattle"
+          @details="goDetails"
         />
       </div>
     </main>
@@ -200,6 +229,43 @@ function goBattle(prof) {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
+}
+
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 48px 24px;
+}
+
+.error-state__icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--red);
+  color: white;
+  font-size: 20px;
+}
+
+.error-state__title {
+  font-size: 11px;
+  color: var(--yellow);
+}
+
+.error-state__copy {
+  max-width: 300px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.error-state__retry {
+  width: auto;
+  margin-top: 4px;
 }
 
 .profdex__nav {

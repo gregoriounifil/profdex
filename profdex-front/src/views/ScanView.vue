@@ -172,7 +172,19 @@ function startScanLoop() {
 
 // ── Inicia câmera ─────────────────────────────────────────────────────────
 onMounted(async () => {
-  if (!store.professors.length) await store.fetch()
+  // A lista de professores é opcional para o scanner funcionar (só é usada para
+  // casar slugs lidos). Rodamos sem `await`: se o back-end estiver fora do ar,
+  // a falha não pode impedir a câmera de abrir.
+  if (!store.professors.length) store.fetch().catch(() => {})
+
+  // getUserMedia exige contexto seguro: só existe em HTTPS ou em localhost. Ao
+  // abrir o app por um IP de rede via HTTP a API nem é exposta — avisamos em vez
+  // de travar no loader de "abrindo câmera".
+  if (!navigator.mediaDevices?.getUserMedia) {
+    error.value = 'A câmera precisa de HTTPS ou localhost. Abra o app por uma conexão segura.'
+    loading.value = false
+    return
+  }
 
   const hasBarcodeDetector = 'BarcodeDetector' in window
   if (!hasBarcodeDetector) {
