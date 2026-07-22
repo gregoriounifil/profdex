@@ -20,6 +20,11 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+  // O Railway roteia o domínio público para o Target Port fixado deste
+  // serviço (3000), que NÃO coincide com a PORT que o Railway injeta em
+  // runtime. Por isso escutamos explicitamente em 3000/0.0.0.0 — senão o
+  // edge proxy tenta 3000, o app está em outra porta, e retorna 502
+  // "connection refused".
+  await app.listen(3000, '0.0.0.0');
 }
 bootstrap();
