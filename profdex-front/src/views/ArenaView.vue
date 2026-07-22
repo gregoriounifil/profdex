@@ -1,11 +1,10 @@
 <script setup>
 import '@google/model-viewer'
-import { computed, onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
+import { onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BattleHpBar from '../components/BattleHpBar.vue'
 import BinaryTunnelScene from '../components/BinaryTunnelScene.vue'
 import { useBattle } from '../composables/useBattle.js'
-import { useArenaAR } from '../composables/useArenaAR.js'
 import { useProfessorsStore } from '../stores/professors'
 import { buildMoveset } from '../data/moves.js'
 import {
@@ -21,9 +20,18 @@ const route = useRoute()
 const router = useRouter()
 const store = useProfessorsStore()
 
-onMounted(() => {
-  if (!store.professors.length) store.fetch().catch(() => {})
-})
+// Professor inimigo: resolvido pelo parâmetro da rota (/arena/:id), que aceita
+// o UUID do banco, o slug (/arena/eron) ou o slug com prefixo (/arena/prof-eron).
+// O `beforeEnter` da rota já carregou a lista, então dá para resolver aqui no
+// setup — a batalha inteira (tipos, golpes, modelo) deriva deste objeto, e por
+// isso ele precisa estar correto ANTES de useBattle() montar os combatentes.
+// Fallbacks: o state da navegação e, por fim, o modelo padrão.
+const enemyProfessor = store.findByKey(route.params.id) ||
+  window.history.state?.character || {
+    id: 'modelo-padrao',
+    name: 'Professor',
+    slug: 'professor',
+  }
 
 // ── Realidade aumentada: DESATIVADA por enquanto. O combate acontece sempre
 // dentro do cenário do túnel binário (câmera/AR desligada). Para reativar,
@@ -67,20 +75,10 @@ onMounted(() => {
 })
 onUnmounted(stopCamera)
 
-// Professor inimigo: vem da rota (/arena/:id) com fallback para o modelo padrão
-const enemyProfessor = computed(() => {
-  const id = route.params.id
-  return (
-    store.professors.find((p) => String(p.id) === String(id)) ||
-    window.history.state?.character || { id: 'modelo-padrao', name: 'Professor', slug: 'professor' }
-  )
-})
-
 // ── Tipos dos combatentes ───────────────────────────────────────────────────
 // Jogador: controlamos o Gustavo (Arquitetura). Inimigo: tipos (1–2) do
 // professor vindo da rota, resolvidos pela planilha (fallback determinístico).
-const enemyProf = enemyProfessor.value
-const enemyTypes = typesForProfessor(enemyProf)
+const enemyTypes = typesForProfessor(enemyProfessor)
 const playerTypes = PROFESSOR_TYPES[PLAYER_KEY]
 
 const enemyTypeIcons = typeInfos(enemyTypes).map((t) => t.icon).join('')
@@ -89,7 +87,7 @@ const playerTypeIcons = typeInfos(playerTypes).map((t) => t.icon).join('')
 // Cada lado recebe um deck de 4 golpes, misturando seus tipos.
 const playerMoves = buildMoveset(playerTypes)
 const enemy = {
-  name: enemyProf.name,
+  name: enemyProfessor.name,
   types: enemyTypes,
   maxHp: MAX_HP,
   moves: buildMoveset(enemyTypes),
@@ -120,36 +118,15 @@ onMounted(start)
 
 // Por enquanto os dois lados usam o mesmo modelo (duplicata);
 // depois o jogador terá o próprio modelo/professor capturado.
-const enemyModelSrc = computed(
-  () => enemyProfessor.value.modelUrl || '/models/seu-modelo-mobile.glb'
-)
+const enemyModelSrc = enemyProfessor.modelUrl || '/models/seu-modelo-mobile.glb'
 const playerModelSrc = enemyModelSrc
 
-// ── AR ancorado (WebXR): coloca os dois lutadores a 1,7 m no plano detectado.
-// Independente do magic-window acima; iOS/sem WebXR cai em `xrError`. ────────
-const arOverlay = useTemplateRef('arOverlay')
-const {
-  arSupport,
-  arActive,
-  arError: xrError,
-  hint: arHint,
-  checkSupport,
-  enterAR,
-  exitAR,
-} = useArenaAR()
-
-onMounted(checkSupport)
-
-function launchAR() {
-  enterAR({
-    enemySrc: enemyModelSrc.value,
-    playerSrc: playerModelSrc.value,
-    overlay: arOverlay.value,
-  })
-}
+// AR ancorado (WebXR) e AR Quick Look (iOS) DESATIVADOS por enquanto — a arena
+// roda só no cenário 3D. O código foi removido; ver histórico do git para
+// restaurar `useArenaAR`/`pollARSupport` quando o AR voltar.
 
 function goBack() {
-  router.push({ name: 'batalha', query: { profId: enemyProfessor.value.id } })
+  router.push({ name: 'batalha', query: { profId: enemyProfessor.id } })
 }
 </script>
 
@@ -201,20 +178,6 @@ function goBack() {
     <!-- HUD sobreposto ao palco -->
     <div class="arena__hud" :class="{ 'arena__hud--player-hit': playerHit }">
       <button class="arena__back" type="button" @click="goBack">←</button>
-
-      <!-- AR ancorado (WebXR): joga os dois lutadores no chão a 1,7 m -->
-      <button
-        v-if="arSupport === 'supported'"
-        class="arena__ar-real"
-        type="button"
-        @click="launchAR"
-      >
-        Ver batalha em AR
-      </button>
-      
-      <p v-if="xrError" class="arena__ar-note arena__ar-note--xr" role="status">
-        {{ xrError }}
-      </p>
 
       <!-- Barra do inimigo (topo esquerdo, como no esboço) -->
       <BattleHpBar
@@ -277,17 +240,6 @@ function goBack() {
         </button>
       </section>
     </div>
-
-    <!-- Overlay do DOM durante a sessão WebXR (dom-overlay). Fica sempre no
-         DOM (exigência do WebXR), mas só mostra controles com o AR ativo. -->
-    <div ref="arOverlay" class="arena__xr-overlay">
-      <template v-if="arActive">
-        <p class="arena__xr-hint" aria-live="polite">{{ arHint }}</p>
-        <button class="arena__xr-exit" type="button" @click="exitAR">
-          Sair do AR
-        </button>
-      </template>
-    </div>
   </main>
 </template>
 
@@ -342,6 +294,9 @@ function goBack() {
   pointer-events: none;
   --poster-color: transparent;
   --progress-bar-color: var(--unifil-gold);
+  /* O botão nativo de AR do model-viewer não cabe no HUD da arena: quem
+     dispara o Quick Look é o botão "Ver em AR" acima. */
+  --ar-button-display: none;
 }
 
 /* Inimigo: mais ao centro e menor -> parece mais fundo no túnel (perspectiva) */

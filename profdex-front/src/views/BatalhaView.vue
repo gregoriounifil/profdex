@@ -25,11 +25,13 @@ const selectedProfessor = computed(() => {
   )
 })
 
-function goToArena() {
+// O parâmetro da rota usa o slug (legível e compartilhável: /arena/eron); o
+// store resolve tanto slug quanto o UUID do banco.
+function routeToCharacter(name) {
   const professor = selectedProfessor.value
   router.push({
-    name: 'arena',
-    params: { id: professor?.id || 'modelo-padrao' },
+    name,
+    params: { id: professor?.slug || professor?.id || 'modelo-padrao' },
     state: {
       character: {
         id: professor?.id || 'modelo-padrao',
@@ -39,27 +41,18 @@ function goToArena() {
       },
     },
   })
+}
+
+function goToArena() {
+  routeToCharacter('arena')
 }
 
 function goToCharacterAR() {
-  const professor = selectedProfessor.value
-  router.push({
-    name: 'character-ar',
-    params: { id: professor?.id || 'modelo-padrao' },
-    state: {
-      character: {
-        id: professor?.id || 'modelo-padrao',
-        name: professor?.name || 'Professor',
-        slug: professor?.slug || 'professor',
-        modelUrl: professor?.modelUrl,
-      },
-    },
-  })
+  routeToCharacter('character-ar')
 }
 
 function openBattleGuide() {
-  const { href } = router.resolve({ name: 'battle-guide' })
-  window.open(href, '_blank', 'noopener')
+  router.push({ name: 'battle-guide' })
 }
 
 function goBack() {
