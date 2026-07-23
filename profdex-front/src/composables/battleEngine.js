@@ -8,7 +8,7 @@
 // A vantagem de tipo vem de types.js (effectiveness): 2× / 0,5× / 1×.
 
 import { typeMultiplier } from '../data/types.js'
-import { EFFECT, STAT, CATEGORY, getMoveById } from '../data/moves.js'
+import { EFFECT, STAT, STAT_LABEL, CATEGORY, getMoveById } from '../data/moves.js'
 
 export const DEFAULT_MAX_HP = 120
 const DAMAGE_SCALE = 0.4 // calibra poder→dano contra a vida
@@ -216,9 +216,10 @@ function changeStage(target, targetKey, stat, delta, turns, events) {
   target.stages[stat] = clampStage(target.stages[stat] + delta)
   if (turns > 0) target.timedBuffs.push({ stat, delta, turns })
   const up = delta > 0
+  const statName = STAT_LABEL[stat] || stat
   events.push({
     type: 'message',
-    text: `${target.name}: ${up ? '▲' : '▼'} ${stat} ${up ? 'subiu' : 'caiu'}!`,
+    text: `${target.name}: ${up ? '▲' : '▼'} ${statName} ${up ? 'subiu' : 'caiu'}!`,
   })
 }
 

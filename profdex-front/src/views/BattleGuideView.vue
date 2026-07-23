@@ -79,6 +79,68 @@ const guide = computed(() =>
         <strong class="weak-txt">fraco (0,5×)</strong> contra os 2 anteriores.
       </p>
 
+      <!-- ATRIBUTOS -->
+      <section class="panel">
+        <h2 class="pixel panel__title">ATRIBUTOS</h2>
+        <ul class="attr-list">
+          <li class="attr" style="--attr-color: var(--ds-green-glow)">
+            <span class="pixel attr__name">PV</span>
+            <p class="attr__desc">
+              Pontos de vida: quanto dano o professor aguenta. Chegou a
+              <strong>zero</strong>, ele desmaia e a batalha acaba.
+            </p>
+          </li>
+          <li class="attr" style="--attr-color: var(--error)">
+            <span class="pixel attr__name">Ataque</span>
+            <p class="attr__desc">
+              Quanto dano os seus golpes causam. Quanto maior, mais forte cada acerto.
+            </p>
+          </li>
+          <li class="attr" style="--attr-color: var(--ds-blue-glow)">
+            <span class="pixel attr__name">Defesa</span>
+            <p class="attr__desc">
+              Reduz o dano que você <strong>recebe</strong>. Quanto maior, menos os
+              golpes do oponente doem.
+            </p>
+          </li>
+          <li class="attr" style="--attr-color: var(--ds-orange-glow)">
+            <span class="pixel attr__name">Velocidade</span>
+            <p class="attr__desc">
+              Quem tem mais Velocidade <strong>age primeiro</strong> no turno e fica
+              mais difícil de acertar.
+            </p>
+          </li>
+        </ul>
+
+        <h3 class="pixel calc__title">COMO O DANO É CALCULADO</h3>
+        <div class="calc-box">
+          <p class="calc-formula pixel">
+            Dano ≈ Poder do golpe × (Ataque ÷ Defesa) × Vantagem de tipo
+          </p>
+        </div>
+        <ul class="calc-notes">
+          <li>
+            O <strong>Poder do golpe</strong> é a base de cada ataque; o
+            <strong>Ataque</strong> de quem bate multiplica, e a
+            <strong>Defesa</strong> de quem apanha divide.
+          </li>
+          <li>
+            A <strong>Vantagem de tipo</strong> multiplica por
+            <strong class="strong-txt">2×</strong> (forte),
+            <strong class="weak-txt">0,5×</strong> (fraco) ou 1× (neutro).
+          </li>
+          <li>
+            Usar um golpe do <strong>mesmo tipo</strong> do professor rende um bônus
+            extra de <strong>1,5×</strong>, e há uma pequena variação aleatória a cada
+            acerto — por isso o dano nunca é idêntico.
+          </li>
+          <li>
+            Buffs e debuffs durante a luta sobem ou descem esses atributos por alguns
+            turnos, mudando o resultado da conta.
+          </li>
+        </ul>
+      </section>
+
       <!-- RODA DE VANTAGENS -->
       <section class="panel">
         <h2 class="pixel panel__title panel__title--wheel">RODA DE VANTAGENS</h2>
@@ -307,6 +369,71 @@ const guide = computed(() =>
   padding: 10px;
   border-radius: var(--radius);
   margin-bottom: 16px;
+}
+
+/* Atributos */
+.attr-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.attr {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--attr-color);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  padding: 10px 12px;
+}
+
+.attr__name {
+  display: block;
+  font-size: 11px;
+  color: var(--attr-color);
+  margin-bottom: 4px;
+}
+
+.attr__desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.calc__title {
+  font-size: 10px;
+  color: var(--text);
+  text-align: center;
+  margin: 18px 0 10px;
+}
+
+.calc-box {
+  background: var(--bg-surface);
+  border: 1px dashed var(--yellow);
+  border-radius: var(--radius);
+  padding: 12px 10px;
+}
+
+.calc-formula {
+  font-size: 9px;
+  line-height: 1.6;
+  color: var(--yellow);
+  text-align: center;
+}
+
+.calc-notes {
+  list-style: disc;
+  margin: 12px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.calc-notes li {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
 }
 
 /* Roda */

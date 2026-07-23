@@ -58,9 +58,9 @@ const stats = computed(() => {
   const seed = professor.value.slug || professor.value.id || professor.value.name
   return [
     { key: 'pv', label: 'PV', value: statFromSeed(seed, 'pv', 100, 150), max: 150, color: 'var(--ds-green-glow)' },
-    { key: 'rigor', label: 'Rigor', hint: 'ATQ', value: statFromSeed(seed, 'rigor', 55, 95), max: 100, color: 'var(--error)' },
-    { key: 'didatica', label: 'Didática', hint: 'DEF', value: statFromSeed(seed, 'didatica', 55, 95), max: 100, color: 'var(--ds-blue-glow)' },
-    { key: 'raciocinio', label: 'Raciocínio', hint: 'VEL', value: statFromSeed(seed, 'raciocinio', 55, 95), max: 100, color: 'var(--ds-orange-glow)' },
+    { key: 'rigor', label: 'Ataque', value: statFromSeed(seed, 'rigor', 55, 95), max: 100, color: 'var(--error)' },
+    { key: 'didatica', label: 'Defesa', value: statFromSeed(seed, 'didatica', 55, 95), max: 100, color: 'var(--ds-blue-glow)' },
+    { key: 'raciocinio', label: 'Velocidade', value: statFromSeed(seed, 'raciocinio', 55, 95), max: 100, color: 'var(--ds-orange-glow)' },
   ]
 })
 
