@@ -12,7 +12,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['details'])
+const emit = defineEmits(['battle'])
 
 const imgError = ref(false)
 const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
@@ -32,14 +32,7 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
         #{{ String(index + 1).padStart(3, '0') }}
       </div>
 
-      <component
-        :is="professor.captured ? 'button' : 'div'"
-        class="prof-card__avatar"
-        :class="{ 'prof-card__avatar--clickable': professor.captured }"
-        :type="professor.captured ? 'button' : undefined"
-        :aria-label="professor.captured ? `Ver ficha de ${professor.name}` : undefined"
-        @click="professor.captured && emit('details', professor)"
-      >
+      <div class="prof-card__avatar">
         <template v-if="professor.captured">
           <img
             v-if="!imgError"
@@ -67,7 +60,7 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
             <span class="unknown-badge pixel" aria-hidden="true">?</span>
           </div>
         </template>
-      </component>
+      </div>
 
       <div class="prof-card__name">
         <span v-if="professor.captured">{{ professor.name }}</span>
@@ -80,6 +73,16 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
         <span v-else-if="professor.discovered" class="status-discovered">ENCONTRADO</span>
         <span v-else class="status-unknown">???</span>
       </div>
+
+      <button
+        v-if="professor.captured"
+        class="battle-btn pixel"
+        type="button"
+        :aria-label="`Batalhar com ${professor.name}`"
+        @click.stop="emit('battle', professor)"
+      >
+        ⚔️ BATALHA
+      </button>
     </div>
   </div>
 </template>
@@ -122,24 +125,6 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-/* Avatar de professor liberado vira botão para abrir a ficha */
-.prof-card__avatar--clickable {
-  background: transparent;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  transition: transform 0.15s ease, filter 0.15s ease;
-}
-
-.prof-card__avatar--clickable:hover {
-  transform: scale(1.06);
-  filter: brightness(1.08);
-}
-
-.prof-card__avatar--clickable:active {
-  transform: scale(0.97);
 }
 
 .avatar-img {
@@ -288,4 +273,21 @@ const cartoonSrc = `/professors/${props.professor.slug}-cartoon.png`
 .status-discovered { color: var(--red-light); }
 .status-unknown { color: var(--text-muted); }
 
+.battle-btn {
+  width: 100%;
+  padding: 6px 4px;
+  font-size: 7px;
+  letter-spacing: 0.5px;
+  background: var(--red);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.battle-btn:active {
+  transform: scale(0.96);
+  background: var(--red-dark);
+}
 </style>

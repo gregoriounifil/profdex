@@ -10,13 +10,9 @@ export default defineConfig({
     vue({
       template: {
         compilerOptions: {
-          // Diz ao Vue quais tags NÃO são componentes Vue, para não tentar
-          // resolvê-las e não emitir warnings no console:
-          //  - `model-viewer`: web-component nativo da lib de AR
-          //  - `Tres*`: tags do TresJS resolvidas pelo renderer próprio dele
-          //    (o `<TresCanvas>` em si continua sendo um componente Vue real)
-          isCustomElement: (tag) =>
-            tag === 'model-viewer' || (tag.startsWith('Tres') && tag !== 'TresCanvas'),
+          // Diz ao Vue que model-viewer é um elemento nativo,
+          // não um componente Vue — evita warnings no console
+          isCustomElement: (tag) => tag === 'model-viewer',
         },
       },
     }),

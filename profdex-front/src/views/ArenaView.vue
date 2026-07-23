@@ -1,103 +1,41 @@
 <script setup>
 import '@google/model-viewer'
-import { onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BattleHpBar from '../components/BattleHpBar.vue'
-import BinaryTunnelScene from '../components/BinaryTunnelScene.vue'
 import { useBattle } from '../composables/useBattle.js'
 import { useProfessorsStore } from '../stores/professors'
-import { buildMoveset } from '../data/moves.js'
-import {
-  typesForProfessor,
-  typeInfos,
-  PROFESSOR_TYPES,
-  PLAYER_KEY,
-} from '../data/professorTypes.js'
-
-const MAX_HP = 120
+import { getMovesFor } from '../data/moves.js'
 
 const route = useRoute()
 const router = useRouter()
 const store = useProfessorsStore()
 
-// Professor inimigo: resolvido pelo parâmetro da rota (/arena/:id), que aceita
-// o UUID do banco, o slug (/arena/eron) ou o slug com prefixo (/arena/prof-eron).
-// O `beforeEnter` da rota já carregou a lista, então dá para resolver aqui no
-// setup — a batalha inteira (tipos, golpes, modelo) deriva deste objeto, e por
-// isso ele precisa estar correto ANTES de useBattle() montar os combatentes.
-// Fallbacks: o state da navegação e, por fim, o modelo padrão.
-const enemyProfessor = store.findByKey(route.params.id) ||
-  window.history.state?.character || {
-    id: 'modelo-padrao',
-    name: 'Professor',
-    slug: 'professor',
-  }
-
-// ── Realidade aumentada: DESATIVADA por enquanto. O combate acontece sempre
-// dentro do cenário do túnel binário (câmera/AR desligada). Para reativar,
-// volte `arEnabled` para `true` e restaure o botão de alternar no template.
-const arEnabled = ref(false)
-const arError = ref(null)
-const camVideo = useTemplateRef('camVideo')
-let camStream = null
-
-async function startCamera() {
-  arError.value = null
-  try {
-    camStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' } },
-      audio: false,
-    })
-    const v = camVideo.value
-    if (v) {
-      v.srcObject = camStream
-      v.setAttribute('playsinline', '')
-      v.muted = true
-      await v.play()
-    }
-  } catch (e) {
-    // Sem câmera/permissão: cai para o cenário 3D em vez de travar o combate.
-    arError.value = e?.message ?? 'Câmera indisponível'
-    arEnabled.value = false
-  }
-}
-
-function stopCamera() {
-  if (camStream) {
-    camStream.getTracks().forEach((t) => t.stop())
-    camStream = null
-  }
-  if (camVideo.value) camVideo.value.srcObject = null
-}
-
 onMounted(() => {
-  if (arEnabled.value) startCamera()
+  if (!store.professors.length) store.fetch().catch(() => {})
 })
-onUnmounted(stopCamera)
 
-// ── Tipos dos combatentes ───────────────────────────────────────────────────
-// Jogador: controlamos o Gustavo (Arquitetura). Inimigo: tipos (1–2) do
-// professor vindo da rota, resolvidos pela planilha (fallback determinístico).
-const enemyTypes = typesForProfessor(enemyProfessor)
-const playerTypes = PROFESSOR_TYPES[PLAYER_KEY]
+// Professor inimigo: vem da rota (/arena/:id) com fallback para o modelo padrão
+const enemyProfessor = computed(() => {
+  const id = route.params.id
+  return (
+    store.professors.find((p) => String(p.id) === String(id)) ||
+    window.history.state?.character || { id: 'modelo-padrao', name: 'Professor', slug: 'professor' }
+  )
+})
 
-const enemyTypeIcons = typeInfos(enemyTypes).map((t) => t.icon).join('')
-const playerTypeIcons = typeInfos(playerTypes).map((t) => t.icon).join('')
+const enemy = computed(() => ({
+  name: enemyProfessor.value.name,
+  maxHp: 60,
+  moves: getMovesFor(enemyProfessor.value),
+}))
 
-// Cada lado recebe um deck de 4 golpes, misturando seus tipos.
-const playerMoves = buildMoveset(playerTypes)
-const enemy = {
-  name: enemyProfessor.name,
-  types: enemyTypes,
-  maxHp: MAX_HP,
-  moves: buildMoveset(enemyTypes),
-}
 const player = {
-  name: 'Gustavo',
-  types: playerTypes,
-  maxHp: MAX_HP,
-  moves: playerMoves,
+  name: 'Você',
+  maxHp: 60,
 }
+
+const playerMoves = getMovesFor(null)
 
 const {
   playerHp,
@@ -106,57 +44,42 @@ const {
   message,
   enemyHit,
   playerHit,
-  playerStatus,
-  enemyStatus,
   isOver,
   start,
   useMove,
   flee,
-} = useBattle({ player, enemy })
+} = useBattle({ player, enemy: enemy.value })
 
 onMounted(start)
 
 // Por enquanto os dois lados usam o mesmo modelo (duplicata);
 // depois o jogador terá o próprio modelo/professor capturado.
-const enemyModelSrc = enemyProfessor.modelUrl || '/models/seu-modelo-mobile.glb'
+const enemyModelSrc = computed(
+  () => enemyProfessor.value.modelUrl || '/models/seu-modelo-mobile.glb'
+)
 const playerModelSrc = enemyModelSrc
 
-// AR ancorado (WebXR) e AR Quick Look (iOS) DESATIVADOS por enquanto — a arena
-// roda só no cenário 3D. O código foi removido; ver histórico do git para
-// restaurar `useArenaAR`/`pollARSupport` quando o AR voltar.
-
 function goBack() {
-  router.push({ name: 'batalha', query: { profId: enemyProfessor.id } })
+  router.push({ name: 'batalha', query: { profId: enemyProfessor.value.id } })
 }
 </script>
 
 <template>
   <main class="arena">
     <!-- Palco: inimigo ao fundo (de frente) e jogador em primeiro plano (de costas) -->
-    <div class="arena__stage" :class="{ 'arena__stage--ar': arEnabled }">
-      <!-- Fundo do combate: câmera (AR) ou o cenário do túnel binário -->
-      <video
-        v-show="arEnabled"
-        ref="camVideo"
-        class="arena__camera"
-        autoplay
-        playsinline
-        muted
-      />
-      <BinaryTunnelScene v-if="!arEnabled" class="arena__scenario" :speed="4" />
-
+    <div class="arena__stage">
       <model-viewer
         class="arena__model arena__model--enemy"
         :class="{ 'arena__model--hit': enemyHit }"
         :src="enemyModelSrc"
         :alt="`Prof. ${enemyProfessor.name} em batalha`"
-        camera-orbit="-10deg 86deg 95%"
+        camera-orbit="-15deg 86deg 105%"
         interaction-prompt="none"
         disable-zoom
         disable-tap
         disable-pan
         shadow-intensity="1"
-        shadow-softness="1"
+        shadow-softness="0.8"
         exposure="1"
       />
       <model-viewer
@@ -182,25 +105,21 @@ function goBack() {
       <!-- Barra do inimigo (topo esquerdo, como no esboço) -->
       <BattleHpBar
         class="arena__enemy-bar"
-        :name="`${enemyTypeIcons} Prof. ${enemy.name}`"
+        :name="`Prof. ${enemy.name}`"
         :hp="enemyHp"
         :max-hp="enemy.maxHp"
+        :level="7"
         :avatar-src="`/professors/${enemyProfessor.slug}-cartoon.png`"
       />
-      <span v-if="enemyStatus" class="arena__status arena__status--enemy">
-        {{ enemyStatus }}
-      </span>
 
       <!-- Barra do jogador (acima do painel de comandos) -->
       <BattleHpBar
         class="arena__player-bar"
-        :name="`${playerTypeIcons} ${player.name}`"
+        :name="player.name"
         :hp="playerHp"
         :max-hp="player.maxHp"
+        :level="5"
       />
-      <span v-if="playerStatus" class="arena__status arena__status--player">
-        {{ playerStatus }}
-      </span>
 
       <!-- Painel de comandos: mensagem + golpes + fugir -->
       <section class="battle-panel" aria-label="Comandos de batalha">
@@ -217,7 +136,7 @@ function goBack() {
             @click="useMove(move)"
           >
             <span class="pixel move-btn__name">{{ move.name }}</span>
-            <span class="pixel move-btn__meta">{{ move.raw }}</span>
+            <span class="pixel move-btn__meta">PWR {{ move.power }}</span>
           </button>
         </div>
 
@@ -252,10 +171,6 @@ function goBack() {
 .arena__stage {
   position: absolute;
   inset: 0;
-  /* z-index explícito -> a etapa vira um contexto de empilhamento próprio,
-    prendendo os modelos (z-index:1) abaixo do HUD (z-index:2). Assim os
-    bonecos nunca cobrem os botões/textos. */
-  z-index: 0;
   /* Piso da arena: gradiente sutil para dar profundidade */
   background:
     radial-gradient(ellipse 65% 18% at 32% 42%, rgba(237, 175, 104, 0.12), transparent),
@@ -263,64 +178,28 @@ function goBack() {
     linear-gradient(180deg, var(--bg-deep) 0%, #1a1e26 55%, var(--bg-deep) 100%);
 }
 
-/* No modo AR o gradiente some para a câmera aparecer limpa */
-.arena__stage--ar {
-  background: #000;
-}
-
-/* Camada de fundo: feed da câmera (AR) */
-.arena__camera {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  z-index: 0;
-}
-
-/* Camada de fundo: cenário do túnel binário (AR desligada) */
-.arena__scenario {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
 /* Modelos 3D estáticos: sem rotação nem zoom (câmera travada) */
 .arena__model {
   position: absolute;
-  z-index: 1;
   pointer-events: none;
   --poster-color: transparent;
   --progress-bar-color: var(--unifil-gold);
-  /* O botão nativo de AR do model-viewer não cabe no HUD da arena: quem
-     dispara o Quick Look é o botão "Ver em AR" acima. */
-  --ar-button-display: none;
 }
 
-/* Inimigo: mais ao centro e menor -> parece mais fundo no túnel (perspectiva) */
+/* Inimigo: ao fundo, à esquerda, de frente (levemente virado para o jogador) */
 .arena__model--enemy {
-  top: 24%;
-  left: 10%;
-  width: 50%;
-  height: 34%;
-  /* Contorno vermelho discreto: drop-shadow segue a silhueta do modelo
-     (o canvas é transparente), diferente de um border/outline retangular.
-     --error é o vermelho real da paleta (--red do tema é marrom). */
-  filter:
-    drop-shadow(0 0 1px var(--error))
-    drop-shadow(0 0 2px var(--error));
+  top: 14%;
+  left: -4%;
+  width: 68%;
+  height: 42%;
 }
 
-/* Jogador: em primeiro plano, à direita, de costas — abaixado (mais para baixo) */
+/* Jogador: em primeiro plano, à direita, de costas para nós */
 .arena__model--player {
   right: -10%;
-  bottom: 17%;
+  bottom: 150px;
   width: 88%;
   height: 50%;
-  /* Mesmo contorno, em azul */
-  filter:
-    drop-shadow(0 0 1px var(--ds-blue-glow))
-    drop-shadow(0 0 2px var(--ds-blue-glow));
 }
 
 /* Flash + tremida no modelo que tomou dano */
@@ -332,7 +211,6 @@ function goBack() {
 .arena__hud {
   position: absolute;
   inset: 0;
-  z-index: 2; /* acima do palco (z-index:0) e dos modelos -> botões/textos na frente */
   display: flex;
   flex-direction: column;
   pointer-events: none;
@@ -365,115 +243,6 @@ function goBack() {
   font-size: 18px;
 }
 
-/* Botão de canto para alternar AR (abaixo do voltar) */
-.arena__ar-toggle {
-  position: absolute;
-  top: calc(58px + env(safe-area-inset-top));
-  right: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: 100px;
-  background: rgba(0, 0, 0, 0.55);
-  color: var(--text);
-  border: 1px solid var(--border);
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.arena__ar-toggle--on {
-  border-color: var(--ds-blue);
-  color: var(--ds-blue-glow);
-}
-
-.arena__ar-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-muted);
-}
-
-.arena__ar-toggle--on .arena__ar-dot {
-  background: var(--ds-blue-glow);
-  box-shadow: 0 0 8px var(--ds-blue-glow);
-}
-
-.arena__ar-note {
-  position: absolute;
-  top: calc(100px + env(safe-area-inset-top));
-  right: 12px;
-  max-width: 60%;
-  padding: 6px 10px;
-  border-radius: var(--radius);
-  background: rgba(0, 0, 0, 0.55);
-  color: var(--text-muted);
-  font-size: 10px;
-  line-height: 1.4;
-  text-align: right;
-}
-
-.arena__ar-note--xr {
-  top: calc(136px + env(safe-area-inset-top));
-}
-
-/* Botão de AR ancorado (WebXR) — abaixo do toggle de câmera */
-.arena__ar-real {
-  position: absolute;
-  top: calc(96px + env(safe-area-inset-top));
-  right: 12px;
-  min-height: 34px;
-  padding: 0 14px;
-  border-radius: 100px;
-  background: var(--ds-blue);
-  color: var(--bg-deep);
-  border: 1px solid var(--ds-blue-glow);
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-/* Overlay do DOM durante a sessão imersiva. Sem AR ativo fica invisível e
-   deixa o toque passar (pointer-events: none); só os controles recebem toque. */
-.arena__xr-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-}
-
-.arena__xr-hint {
-  position: absolute;
-  top: calc(16px + env(safe-area-inset-top));
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: 80%;
-  padding: 8px 14px;
-  border-radius: 100px;
-  background: rgba(0, 0, 0, 0.7);
-  color: var(--text);
-  font-size: 12px;
-  text-align: center;
-}
-
-.arena__xr-exit {
-  position: absolute;
-  bottom: calc(24px + env(safe-area-inset-bottom));
-  left: 50%;
-  transform: translateX(-50%);
-  min-height: 44px;
-  padding: 0 28px;
-  border-radius: 100px;
-  background: rgba(0, 0, 0, 0.7);
-  color: var(--text);
-  border: 1px solid var(--border);
-  font-size: 13px;
-  font-weight: 700;
-  pointer-events: auto;
-}
-
 .arena__enemy-bar {
   position: absolute;
   top: calc(12px + env(safe-area-inset-top));
@@ -486,30 +255,6 @@ function goBack() {
   left: 12px;
   bottom: 256px;
   max-width: 58%;
-}
-
-/* Chip de status (Travado/Confuso/Queimando) junto de cada barra */
-.arena__status {
-  position: absolute;
-  z-index: 2;
-  padding: 2px 8px;
-  border-radius: 100px;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid var(--error);
-  color: var(--error);
-  font-size: 9px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.arena__status--enemy {
-  top: calc(58px + env(safe-area-inset-top));
-  left: 12px;
-}
-
-.arena__status--player {
-  left: 12px;
-  bottom: 232px;
 }
 
 /* Painel inferior: mensagem + grid 2x2 + fugir */

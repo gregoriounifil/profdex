@@ -11,14 +11,8 @@
     </Transition>
 
     <!-- O elemento principal da lib — renderiza o modelo 3D -->
-    <!-- `ar` fica sempre ligado: é ele que autoriza o model-viewer a escolher um
-         modo (webxr / scene-viewer / quick-look). Amarrar o atributo ao nosso
-         `arStatus` criava um impasse — assim que a sondagem falhava uma vez, o
-         atributo saía do DOM e o AR nunca mais podia ser reativado.
-         `ios-src` é opcional: sem ele o model-viewer gera o USDZ a partir do
-         GLB para o Quick Look (necessário só em navegadores iOS de terceiros). -->
     <model-viewer ref="viewerRef" :src="config.src" :poster="config.poster" :alt="config.alt ?? 'Modelo 3D'"
-      :ios-src="config.iosSrc" ar ar-modes="webxr scene-viewer quick-look"
+      :ios-src="config.iosSrc" :ar="arStatus !== 'not-supported'" ar-modes="webxr scene-viewer quick-look"
       :ar-placement="config.arPlacement ?? 'floor'" :auto-rotate="config.autoRotate ?? false"
       :camera-controls="config.cameraControls ?? true" shadow-intensity="1" shadow-softness="0.8" exposure="1"
       ar-scale="auto" ar-usdz-max-texture-size="2048" touch-action="pan-y" class="ar-viewer__canvas">

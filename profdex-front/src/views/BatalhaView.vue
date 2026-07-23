@@ -25,13 +25,11 @@ const selectedProfessor = computed(() => {
   )
 })
 
-// O parâmetro da rota usa o slug (legível e compartilhável: /arena/eron); o
-// store resolve tanto slug quanto o UUID do banco.
-function routeToCharacter(name) {
+function goToArena() {
   const professor = selectedProfessor.value
   router.push({
-    name,
-    params: { id: professor?.slug || professor?.id || 'modelo-padrao' },
+    name: 'arena',
+    params: { id: professor?.id || 'modelo-padrao' },
     state: {
       character: {
         id: professor?.id || 'modelo-padrao',
@@ -43,20 +41,33 @@ function routeToCharacter(name) {
   })
 }
 
-function goToArena() {
-  routeToCharacter('arena')
-}
-
 function goToCharacterAR() {
-  routeToCharacter('character-ar')
+  const professor = selectedProfessor.value
+  router.push({
+    name: 'character-ar',
+    params: { id: professor?.id || 'modelo-padrao' },
+    state: {
+      character: {
+        id: professor?.id || 'modelo-padrao',
+        name: professor?.name || 'Professor',
+        slug: professor?.slug || 'professor',
+        modelUrl: professor?.modelUrl,
+      },
+    },
+  })
 }
 
 function openBattleGuide() {
-  router.push({ name: 'battle-guide' })
+  const { href } = router.resolve({ name: 'battle-guide' })
+  window.open(href, '_blank', 'noopener')
 }
 
 function goBack() {
   router.push({ name: 'profdex' })
+}
+
+function hideBrokenImage(event) {
+  event.currentTarget.style.display = 'none'
 }
 </script>
 
@@ -74,6 +85,22 @@ function goBack() {
     </header>
 
     <main class="batalha__main page">
+      <!-- Card do professor selecionado (se vier da ProfdexView) -->
+      <div v-if="selectedProfessor" class="prof-preview">
+        <div class="prof-preview__avatar">
+          <img
+            :src="`/professors/${selectedProfessor.slug}-cartoon.png`"
+            :alt="selectedProfessor.name"
+            class="prof-preview__img"
+            @error="hideBrokenImage"
+          />
+        </div>
+        <div class="prof-preview__info">
+          <span class="pixel prof-preview__label">PROFESSOR SELECIONADO</span>
+          <span class="prof-preview__name">{{ selectedProfessor.name }}</span>
+        </div>
+      </div>
+
       <section class="battle-options" aria-label="Opções de batalha">
         <button
           class="battle-option battle-option--primary"
@@ -195,6 +222,53 @@ function goBack() {
   justify-content: center;
   padding: 20px 16px;
   gap: 20px;
+}
+
+/* Preview do professor selecionado */
+.prof-preview {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--yellow);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 0 16px rgba(255, 222, 0, 0.1);
+}
+
+.prof-preview__avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--yellow);
+  flex-shrink: 0;
+  background: var(--bg-surface);
+}
+
+.prof-preview__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.prof-preview__info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.prof-preview__label {
+  font-size: 7px;
+  color: var(--yellow);
+  letter-spacing: 0.5px;
+}
+
+.prof-preview__name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
 }
 
 /* Opções de batalha */
