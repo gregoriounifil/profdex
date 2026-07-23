@@ -5,7 +5,6 @@ const props = defineProps({
   name: { type: String, required: true },
   hp: { type: Number, required: true },
   maxHp: { type: Number, required: true },
-  level: { type: Number, default: 5 },
   avatarSrc: { type: String, default: '' },
 })
 
@@ -33,7 +32,6 @@ function hideBrokenImage(event) {
     <div class="hp-panel__info">
       <div class="hp-panel__row">
         <span class="pixel hp-panel__name">{{ name }}</span>
-        <span class="pixel hp-panel__level">Nv{{ level }}</span>
       </div>
       <div class="hp-panel__bar" role="progressbar" :aria-valuenow="hp" :aria-valuemax="maxHp"
         :aria-label="`HP de ${name}`">
@@ -97,12 +95,6 @@ function hideBrokenImage(event) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.hp-panel__level {
-  font-size: 7px;
-  color: var(--yellow);
-  flex-shrink: 0;
 }
 
 .hp-panel__bar {

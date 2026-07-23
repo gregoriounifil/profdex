@@ -185,7 +185,6 @@ function goBack() {
         :name="`${enemyTypeIcons} Prof. ${enemy.name}`"
         :hp="enemyHp"
         :max-hp="enemy.maxHp"
-        :level="7"
         :avatar-src="`/professors/${enemyProfessor.slug}-cartoon.png`"
       />
       <span v-if="enemyStatus" class="arena__status arena__status--enemy">
@@ -198,7 +197,6 @@ function goBack() {
         :name="`${playerTypeIcons} ${player.name}`"
         :hp="playerHp"
         :max-hp="player.maxHp"
-        :level="5"
       />
       <span v-if="playerStatus" class="arena__status arena__status--player">
         {{ playerStatus }}
