@@ -12,6 +12,7 @@ node_modules
 dist
 dist-ssr
 coverage
+.codex
 *.local
 
 # Editor directories and files

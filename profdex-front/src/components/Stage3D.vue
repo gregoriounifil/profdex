@@ -5,7 +5,7 @@ import SceneContent from '@/components/SceneContent.vue'
 
 // Mesmo padrão do ARViewer: um único prop `config` descreve a cena,
 // então esta camada 3D é reutilizável e a página só passa os dados.
-const props = defineProps({
+defineProps({
   config: {
     type: Object,
     default: () => ({}),

@@ -21,15 +21,15 @@ model User {
 }
 
 model Professor {
-  id            String      @id @default(uuid())
-  name          String
-  slug          String      @unique
-  captureToken  String?     @unique @map("capture_token")
-  modelUrl      String?     @map("model_url")
-  marker1Index  Int         @map("marker1_index")
-  marker2Index  Int         @map("marker2_index")
-  discoveries   Discovery[]
-  captures      Capture[]
+  id               String      @id @default(uuid())
+  name             String
+  slug             String      @unique
+  captureTokenHash String?     @unique @map("capture_token_hash")
+  modelUrl         String?     @map("model_url")
+  marker1Index     Int         @map("marker1_index")
+  marker2Index     Int         @map("marker2_index")
+  discoveries      Discovery[]
+  captures         Capture[]
 
   @@map("professors")
 }

@@ -16,8 +16,8 @@ function start() {
 const steps = [
   {
     icon: '📍',
-    title: 'Encontre os Marcadores',
-    desc: 'Espalhados pelo evento, cada marcador esconde um professor. Abra o scanner e aponte sua câmera.',
+    title: 'Encontre os Professores',
+    desc: 'Explore o evento e encontre os professores participantes.',
   },
   {
     icon: '🎓',
@@ -26,13 +26,13 @@ const steps = [
   },
   {
     icon: '🃏',
-    title: 'Receba o Card',
-    desc: 'Acertou? O professor te dá um card especial com um segundo marcador no verso.',
+    title: 'Receba o QR',
+    desc: 'Acertou? O professor apresenta o QR de captura protegido.',
   },
   {
     icon: '✨',
     title: 'Capture!',
-    desc: 'Abra o modo Captura, coloque os dois marcadores na câmera ao mesmo tempo e capture o professor!',
+    desc: 'Leia o QR no scanner. A prova é validada pelo servidor antes da captura.',
   },
 ]
 </script>

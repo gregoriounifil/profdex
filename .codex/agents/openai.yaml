@@ -1,0 +1,4 @@
+interface:
+  display_name: "Auditoria ProfDex"
+  short_description: "Audita qualidade, segurança e gameplay continuamente"
+  default_prompt: "Use $profdex-audit para auditar o ProfDex, corrigir riscos e executar todos os quality gates."

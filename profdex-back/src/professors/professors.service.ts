@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PUBLIC_PROFESSOR_SELECT } from './public-professor.select';
 
 @Injectable()
 export class ProfessorsService {
@@ -7,9 +8,18 @@ export class ProfessorsService {
 
   async findAll(userId: string) {
     const [professors, discoveries, captures] = await Promise.all([
-      this.prisma.professor.findMany({ orderBy: { name: 'asc' } }),
-      this.prisma.discovery.findMany({ where: { userId }, select: { professorId: true } }),
-      this.prisma.capture.findMany({ where: { userId }, select: { professorId: true } }),
+      this.prisma.professor.findMany({
+        orderBy: { name: 'asc' },
+        select: PUBLIC_PROFESSOR_SELECT,
+      }),
+      this.prisma.discovery.findMany({
+        where: { userId },
+        select: { professorId: true },
+      }),
+      this.prisma.capture.findMany({
+        where: { userId },
+        select: { professorId: true },
+      }),
     ]);
 
     const discoveredIds = new Set(discoveries.map((d) => d.professorId));
@@ -23,6 +33,9 @@ export class ProfessorsService {
   }
 
   findOne(id: string) {
-    return this.prisma.professor.findUniqueOrThrow({ where: { id } });
+    return this.prisma.professor.findUniqueOrThrow({
+      where: { id },
+      select: PUBLIC_PROFESSOR_SELECT,
+    });
   }
 }

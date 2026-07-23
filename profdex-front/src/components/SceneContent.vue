@@ -7,7 +7,7 @@ import { GLTFModel } from '@tresjs/cientos'
 // Só aqui dentro o contexto do Tres existe — por isso o useLoop
 // (o "game loop" de cada frame) e as tags <Tres*> ficam neste arquivo,
 // e não no componente que hospeda o canvas.
-const props = defineProps({
+defineProps({
   // Caminho de um .glb dentro de /public. Vazio = só a forma procedural.
   modelPath: { type: String, default: '' },
 })

@@ -1,4 +1,5 @@
 <script setup>
+import jsQR from 'jsqr'
 import { onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProfessorsStore } from '../stores/professors'
@@ -12,10 +13,8 @@ const canvasRef = useTemplateRef('qrCanvas')
 const loading = ref(true)
 const error = ref(null)
 const foundProfessor = ref(null)
-const discovering = ref(false)
 const capturing = ref(false)
 const captured = ref(false)
-const avatarError = ref(false)
 const captureAvatarError = ref(false)
 
 let stream = null
@@ -24,20 +23,8 @@ let detector = null
 let lastScannedData = null
 let lastScannedAt = 0
 
-// ── Carrega jsQR do CDN como fallback ─────────────────────────────────────
-function loadJsQR() {
-  return new Promise((resolve, reject) => {
-    if (window.jsQR) { resolve(); return }
-    const s = document.createElement('script')
-    s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js'
-    s.onload = resolve
-    s.onerror = () => reject(new Error('Falha ao carregar jsQR'))
-    document.head.appendChild(s)
-  })
-}
-
 // ── Detecta se o dado do QR é um token de captura ─────────────────────────
-// Aceita: "capture:TOKEN" ou URL com path /capture/TOKEN
+// Aceita: "capture:TOKEN" ou URL HTTPS autorizada com path /capture/TOKEN.
 function extractCaptureToken(data) {
   if (!data) return null
 
@@ -48,41 +35,16 @@ function extractCaptureToken(data) {
   // Formato URL: qualquer URL com /capture/TOKEN no path
   try {
     const url = new URL(data)
+    const configuredOrigins = (import.meta.env.VITE_QR_ORIGINS || window.location.origin)
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+    if (url.protocol !== 'https:' || !configuredOrigins.includes(url.origin)) return null
     const match = url.pathname.match(/\/capture\/(.+)/)
     if (match) return match[1]
   } catch { /* não é URL */ }
 
   return null
-}
-
-// ── Extrai slug de professor do dado do QR ─────────────────────────────────
-// Aceita: URL com /professor/slug, /slug, ou slug direto
-function extractSlug(data) {
-  if (!data) return null
-  const lower = data.trim().toLowerCase()
-
-  try {
-    const url = new URL(data)
-    const segments = url.pathname.split('/').filter(Boolean)
-    // Ignora paths de captura
-    if (segments[0] === 'capture') return null
-    const last = segments[segments.length - 1]?.toLowerCase()
-    if (last) return last
-  } catch {
-    // não é URL válida — testa como slug direto
-  }
-
-  return lower.replace(/[^a-z0-9]/g, '') || null
-}
-
-// ── Encontra professor pelo slug (ou nome) ─────────────────────────────────
-function matchProfessor(rawSlug) {
-  if (!rawSlug) return null
-  const slug = rawSlug.toLowerCase()
-  return store.professors.find(
-    (p) => p.slug?.toLowerCase() === slug ||
-           p.name?.toLowerCase().replace(/\s+/g, '') === slug
-  ) ?? null
 }
 
 // ── Processa dado lido pelo scanner ───────────────────────────────────────
@@ -109,25 +71,6 @@ async function onQRDetected(data) {
       capturing.value = false
     }
     return
-  }
-
-  // ── Caminho 2: slug de descoberta ────────────────────────────────────────
-  const slug = extractSlug(data)
-  const professor = matchProfessor(slug)
-
-  if (!professor) return
-
-  avatarError.value = false
-  foundProfessor.value = professor
-
-  if (!professor.discovered && !discovering.value) {
-    discovering.value = true
-    try {
-      await store.discover(professor.id)
-      foundProfessor.value = store.professors.find((p) => p.id === professor.id) ?? professor
-    } finally {
-      discovering.value = false
-    }
   }
 }
 
@@ -160,7 +103,7 @@ function startScanLoop() {
       canvas.height = video.videoHeight
       ctx.drawImage(video, 0, 0)
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      const code = window.jsQR(imageData.data, imageData.width, imageData.height, {
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: 'dontInvert',
       })
       if (code) onQRDetected(code.data)
@@ -184,11 +127,6 @@ onMounted(async () => {
     error.value = 'A câmera precisa de HTTPS ou localhost. Abra o app por uma conexão segura.'
     loading.value = false
     return
-  }
-
-  const hasBarcodeDetector = 'BarcodeDetector' in window
-  if (!hasBarcodeDetector) {
-    try { await loadJsQR() } catch (e) { error.value = e.message; loading.value = false; return }
   }
 
   try {
@@ -305,7 +243,7 @@ onUnmounted(() => {
         </div>
 
         <!-- Viewfinder + hint quando nada foi detectado ainda -->
-        <div v-else-if="!foundProfessor && !discovering" class="scan-hint">
+        <div v-else-if="!foundProfessor" class="scan-hint">
           <div class="viewfinder" aria-hidden="true">
             <div class="vf-corner vf-tl" /><div class="vf-corner vf-tr" />
             <div class="vf-corner vf-bl" /><div class="vf-corner vf-br" />
@@ -325,40 +263,6 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- Descobrindo (chamada API em andamento) -->
-        <div v-else-if="discovering" class="scan-center" role="status" aria-live="polite">
-          <div class="discovering-card">
-            <div class="loader-pokeball discovering-ball">
-              <img class="eagle-ball-icon" src="/eagle-ball.png" alt="" aria-hidden="true" />
-            </div>
-            <p class="pixel state-title state-title--accent">DESCOBRINDO!</p>
-          </div>
-        </div>
-
-        <!-- Professor descoberto (slug QR) -->
-        <div v-else-if="foundProfessor" class="scan-bottom">
-          <div class="found-card animate-fade-in">
-            <div class="found-avatar">
-              <img
-                v-if="!avatarError"
-                :src="`/professors/${foundProfessor.slug}-face.png`"
-                :alt="foundProfessor.name"
-                class="found-img"
-                @error="avatarError = true"
-              />
-              <div v-else class="found-fallback">{{ foundProfessor.name[0] }}</div>
-            </div>
-            <div class="found-info">
-              <span class="pixel found-label">
-                {{ foundProfessor.discovered ? 'JÁ DESCOBERTO' : 'DESCOBERTO!' }}
-              </span>
-              <span class="found-name">Prof. {{ foundProfessor.name }}</span>
-              <span class="found-hint">
-                Peça o QR de captura ao professor para adicioná-lo ao ProfDex!
-              </span>
-            </div>
-          </div>
-        </div>
       </template>
     </div>
   </div>

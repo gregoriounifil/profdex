@@ -50,7 +50,6 @@ export function useArenaAR() {
   const WORLD_UP = new THREE.Vector3(0, 1, 0)
   const tmpNormal = new THREE.Vector3()
   const tmpEuler = new THREE.Euler(0, 0, 0, 'YXZ')
-  const tmpMatrix = new THREE.Matrix4()
 
   async function checkSupport() {
     if (!navigator.xr) {

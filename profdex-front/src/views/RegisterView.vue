@@ -14,8 +14,8 @@ const errorMsg = ref('')
 
 async function submit() {
   if (!name.value || !matricula.value || !password.value) return
-  if (password.value.length < 6) {
-    errorMsg.value = 'Senha deve ter no mínimo 6 caracteres'
+  if (password.value.length < 12) {
+    errorMsg.value = 'Senha deve ter no mínimo 12 caracteres'
     return
   }
   loading.value = true
@@ -75,7 +75,7 @@ async function submit() {
           <input
             v-model="password"
             type="password"
-            placeholder="MÍNIMO 6 CARACTERES"
+            placeholder="MÍNIMO 12 CARACTERES"
             autocomplete="new-password"
             class="pk-input"
           />

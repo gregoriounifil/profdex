@@ -3,10 +3,10 @@ import { defineStore } from 'pinia'
 import api from '../services/api'
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref(localStorage.getItem('token'))
-  const user = ref(JSON.parse(localStorage.getItem('user') ?? 'null'))
+  const user = ref(null)
+  const hasRestoredSession = ref(false)
 
-  const isAuthenticated = computed(() => !!token.value)
+  const isAuthenticated = computed(() => !!user.value)
 
   async function register(matricula, name, password) {
     const { data } = await api.post('/auth/register', { matricula, name, password })
@@ -19,18 +19,33 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function logout() {
-    token.value = null
     user.value = null
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    hasRestoredSession.value = true
+    return api.post('/auth/logout').catch(() => {})
   }
 
   function setSession(data) {
-    token.value = data.access_token
     user.value = data.user
-    localStorage.setItem('token', data.access_token)
-    localStorage.setItem('user', JSON.stringify(data.user))
   }
 
-  return { token, user, isAuthenticated, register, login, logout }
+  async function restoreSession() {
+    if (hasRestoredSession.value) return
+    try {
+      const { data } = await api.get('/auth/me')
+      user.value = data.user
+    } catch {
+      user.value = null
+    } finally {
+      hasRestoredSession.value = true
+    }
+  }
+
+  function expireSession() {
+    user.value = null
+    hasRestoredSession.value = true
+  }
+
+  window.addEventListener('auth:expired', expireSession)
+
+  return { user, isAuthenticated, register, login, logout, restoreSession }
 })

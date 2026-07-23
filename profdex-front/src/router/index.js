@@ -59,7 +59,7 @@ const router = createRouter({
     {
       path: '/capture',
       name: 'capture',
-      component: () => import('../views/CaptureView.vue'),
+      redirect: { name: 'scan' },
       meta: { auth: true },
     },
     {
@@ -114,8 +114,9 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
+  await auth.restoreSession()
 
   if (to.meta.auth && !auth.isAuthenticated) {
     return { name: 'login' }

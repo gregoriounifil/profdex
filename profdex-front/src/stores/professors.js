@@ -50,16 +50,6 @@ export const useProfessorsStore = defineStore('professors', () => {
     )
   }
 
-  async function discover(professorId) {
-    await api.post('/discoveries', { professorId })
-    await fetch()
-  }
-
-  async function capture(professorId) {
-    await api.post('/captures', { professorId })
-    await fetch()
-  }
-
   async function captureByToken(token) {
     const { data } = await api.post('/captures/by-token', { token })
     await fetch()
@@ -72,8 +62,6 @@ export const useProfessorsStore = defineStore('professors', () => {
     fetch,
     ensureLoaded,
     findByKey,
-    discover,
-    capture,
     captureByToken,
   }
 })

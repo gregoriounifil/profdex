@@ -1,6 +1,11 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import {
+  getAllowedOrigins,
+  getPort,
+  securityHeaders,
+} from './config/http-security';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -8,9 +13,12 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   app.enableCors({
-    origin: true, // aceita qualquer origem (dev local + celular na mesma rede)
+    origin: getAllowedOrigins(process.env),
     credentials: true,
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type'],
   });
+  app.use(securityHeaders);
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -20,11 +28,10 @@ async function bootstrap() {
     }),
   );
 
-  // O Railway roteia o domínio público para o Target Port fixado deste
-  // serviço (3000), que NÃO coincide com a PORT que o Railway injeta em
-  // runtime. Por isso escutamos explicitamente em 3000/0.0.0.0 — senão o
-  // edge proxy tenta 3000, o app está em outra porta, e retorna 502
-  // "connection refused".
-  await app.listen(3000, '0.0.0.0');
+  await app.listen(getPort(process.env.PORT), '0.0.0.0');
 }
-bootstrap();
+
+bootstrap().catch((error: unknown) => {
+  console.error('Application bootstrap failed', error);
+  process.exitCode = 1;
+});

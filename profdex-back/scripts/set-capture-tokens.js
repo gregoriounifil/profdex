@@ -1,25 +1,33 @@
 /**
- * Salva os captureTokens dos professores no banco.
- * Rode uma vez: node scripts/set-capture-tokens.js
+ * Rotaciona tokens de captura a partir do ambiente e salva somente hashes.
+ * Exemplo:
+ *   CAPTURE_TOKEN_MARIO=<token> CAPTURE_TOKEN_ERON=<token> \
+ *   CAPTURE_TOKEN_GUSTAVO=<token> node scripts/set-capture-tokens.js
  */
 
+const { createHash } = require('node:crypto')
 const { PrismaClient } = require('@prisma/client')
 const db = new PrismaClient()
 
 const TOKENS = {
-  mario:   '2f257167-c20a-4f1c-b513-8a0d0bfb7e52',
-  eron:    '90c0b3f6-21a1-47f4-9cc8-d51a23f0dfbf',
-  gustavo: 'f6cf062f-b4b4-4756-bfe4-0fc3d7bbfdfb',
+  mario: process.env.CAPTURE_TOKEN_MARIO,
+  eron: process.env.CAPTURE_TOKEN_ERON,
+  gustavo: process.env.CAPTURE_TOKEN_GUSTAVO,
 }
 
 async function main() {
-  for (const [slug, captureToken] of Object.entries(TOKENS)) {
+  for (const [slug, token] of Object.entries(TOKENS)) {
+    if (!token || token.length < 32) {
+      throw new Error(`Token ausente ou curto para ${slug}`)
+    }
+
+    const captureTokenHash = createHash('sha256').update(token, 'utf8').digest('hex')
     const prof = await db.professor.update({
       where: { slug },
-      data: { captureToken },
-      select: { name: true, slug: true, captureToken: true },
+      data: { captureTokenHash },
+      select: { name: true, slug: true },
     })
-    console.log(`✓ ${prof.name} — token: ${prof.captureToken}`)
+    console.log(`✓ Token rotacionado para ${prof.name}`)
   }
 }
 
