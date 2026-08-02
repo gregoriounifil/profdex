@@ -1,7 +1,7 @@
 <script setup>
 import '@google/model-viewer'
 import { onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import BattleHpBar from '../components/BattleHpBar.vue'
 import BinaryTunnelScene from '../components/BinaryTunnelScene.vue'
 import { useBattle } from '../composables/useBattle.js'
@@ -13,25 +13,30 @@ import {
   PROFESSOR_TYPES,
   PLAYER_KEY,
 } from '../data/professorTypes.js'
+import { modelUrlForProfessor, PLAYER_MODEL_URL } from '../data/professorModels.js'
 
 const MAX_HP = 120
 
-const route = useRoute()
 const router = useRouter()
 const store = useProfessorsStore()
 
-// Professor inimigo: resolvido pelo parâmetro da rota (/arena/:id), que aceita
-// o UUID do banco, o slug (/arena/eron) ou o slug com prefixo (/arena/prof-eron).
+// Professor inimigo: FIXO no Eron por enquanto — a arena sempre abre a batalha
+// contra ele, independente do professor que veio em /arena/:id.
+// Para voltar a usar o professor da rota, troque o `ENEMY_KEY` por
+// `route.params.id` (o findByKey aceita UUID, slug e nome) e restaure o
+// `useRoute()` no import de vue-router.
+//
 // O `beforeEnter` da rota já carregou a lista, então dá para resolver aqui no
 // setup — a batalha inteira (tipos, golpes, modelo) deriva deste objeto, e por
 // isso ele precisa estar correto ANTES de useBattle() montar os combatentes.
-// Fallbacks: o state da navegação e, por fim, o modelo padrão.
-const enemyProfessor = store.findByKey(route.params.id) ||
-  window.history.state?.character || {
-    id: 'modelo-padrao',
-    name: 'Professor',
-    slug: 'professor',
-  }
+// O literal é o fallback de quando a lista não veio (backend fora do ar): os
+// dados do Eron que a batalha usa são slug e nome, então ela roda igual.
+const ENEMY_KEY = 'eron'
+const enemyProfessor = store.findByKey(ENEMY_KEY) || {
+  id: ENEMY_KEY,
+  name: 'Eron',
+  slug: ENEMY_KEY,
+}
 
 // ── Realidade aumentada: DESATIVADA por enquanto. O combate acontece sempre
 // dentro do cenário do túnel binário (câmera/AR desligada). Para reativar,
@@ -116,10 +121,10 @@ const {
 
 onMounted(start)
 
-// Por enquanto os dois lados usam o mesmo modelo (duplicata);
-// depois o jogador terá o próprio modelo/professor capturado.
-const enemyModelSrc = enemyProfessor.modelUrl || '/models/seu-modelo-mobile.glb'
-const playerModelSrc = enemyModelSrc
+// Cada lado usa o modelo do seu dono: o inimigo é o professor vindo da rota
+// (Eron, Mário, ...) e o jogador é sempre o Gustavo.
+const enemyModelSrc = modelUrlForProfessor(enemyProfessor)
+const playerModelSrc = PLAYER_MODEL_URL
 
 // AR ancorado (WebXR) e AR Quick Look (iOS) DESATIVADOS por enquanto — a arena
 // roda só no cenário 3D. O código foi removido; ver histórico do git para

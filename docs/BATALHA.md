@@ -116,8 +116,12 @@ Arquitetura em duas camadas: **motor puro** (`battleEngine.js`, testável, sem V
   golpes + Fugir). Flash/shake quando cada lado toma dano.
 
 ### Modelo 3D
-- Por enquanto **os dois lados usam o mesmo GLB** (`/models/seu-modelo-mobile.glb`,
-  ~12,8 MB). Duplicata proposital até o jogador ter modelo próprio.
+- Cada lado usa o GLB do seu dono, resolvido por `modelUrlForProfessor`
+  (`src/data/professorModels.js`): o inimigo é o professor da rota e o jogador é
+  sempre o Gustavo (`PLAYER_MODEL_URL`). Professor sem modelo próprio cai no
+  padrão (`modelo-gustavo.glb`) em vez de pedir um arquivo inexistente.
+- Os arquivos ficam em `public/models/` (`modelo-eron.glb`, `modelo-gustavo.glb`,
+  `modelo-mario.glb`). São grandes (28–77 MB) — vale gerar versões mobile.
 - O tipo de cada combatente é derivado do professor via `typeIdFromSeed`, e o
   moveset via `buildMoveset` — então já variam por professor mesmo sem campo na API.
 

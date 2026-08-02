@@ -6,7 +6,7 @@ const router = useRouter()
 
 // A página só descreve O QUE mostrar; o Stage3D cuida do COMO renderizar.
 const stageConfig = {
-  modelPath: '/models/seu-modelo.glb',
+  modelPath: '/models/modelo-gustavo.glb',
   clearColor: '#1a1a1a',
 }
 </script>

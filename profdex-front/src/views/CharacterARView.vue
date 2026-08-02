@@ -3,24 +3,23 @@ import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ARViewer from '../components/ARViewer.vue'
 import { useProfessorsStore } from '../stores/professors'
+import { modelUrlForProfessor } from '../data/professorModels.js'
 
 const route = useRoute()
 const router = useRouter()
 const store = useProfessorsStore()
 
 const routeCharacter = computed(() => window.history.state?.character || null)
-const character = computed(() => {
-  const id = route.params.id
-  return (
-    store.professors.find((professor) => String(professor.id) === String(id)) ||
-    routeCharacter.value ||
-    // { id: 'modelo-padrao', name: 'Professor', slug: 'professor' }
-    { id: 'modelo-padrao', name: 'GUstavão da Massa', slug: 'professor' }
-  )
-})
+// `findByKey` aceita UUID, slug e nome — a rota recebe UUID vindo da ficha do
+// professor, mas um deep link (/character-ar/eron) também precisa resolver.
+const character = computed(
+  () =>
+    store.findByKey(route.params.id) ||
+    routeCharacter.value || { id: 'modelo-padrao', name: 'Professor', slug: 'professor' },
+)
 
 const viewerConfig = computed(() => ({
-  src: character.value.modelUrl || '/models/seu-modelo-mobile.glb',
+  src: modelUrlForProfessor(character.value),
   alt: `Modelo 3D do Prof. ${character.value.name}`,
   arPlacement: 'floor',
   autoRotate: true,
@@ -54,8 +53,7 @@ onMounted(() => {
       </button>
       <div>
         <span class="pixel eyebrow">VISUALIZADOR AR</span>
-        <!-- <h1>Prof. {{ character.name }}</h1>!-> -->
-        <h1>Prof. Gustavão</h1>
+        <h1>Prof. {{ character.name }}</h1>
       </div>
     </header>
 
