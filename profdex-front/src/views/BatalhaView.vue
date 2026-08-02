@@ -47,8 +47,8 @@ function goToArena() {
   routeToCharacter('arena')
 }
 
-function goToCharacterAR() {
-  routeToCharacter('character-ar')
+function goToRanking() {
+  router.push({ name: 'ranking' })
 }
 
 function openBattleGuide() {
@@ -90,12 +90,12 @@ function goBack() {
         </button>
 
         <button
-          class="battle-option battle-option--ar"
+          class="battle-option battle-option--ranking"
           type="button"
-          @click="goToCharacterAR"
+          @click="goToRanking"
         >
-          <span class="option-icon option-icon--ar">AR</span>
-          <span class="pixel option-label">Ver Prof.</span>
+          <span class="option-icon">🏆</span>
+          <span class="pixel option-label">Ranking</span>
         </button>
 
         <button
@@ -228,8 +228,8 @@ function goBack() {
   border-color: var(--red-light);
 }
 
-.battle-option--ar {
-  border-color: var(--ds-blue);
+.battle-option--ranking {
+  border-color: var(--yellow);
 }
 
 .battle-option--guide {
@@ -248,11 +248,6 @@ function goBack() {
   border: 2px solid var(--border);
   font-size: 22px;
   font-weight: 900;
-}
-
-.option-icon--ar {
-  color: var(--ds-blue-glow);
-  font-size: 12px;
 }
 
 .option-label {
