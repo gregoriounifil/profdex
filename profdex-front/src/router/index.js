@@ -75,6 +75,12 @@ const router = createRouter({
       meta: { auth: true },
     },
     {
+      path: '/ranking',
+      name: 'ranking',
+      component: () => import('../views/RankingView.vue'),
+      meta: { auth: true },
+    },
+    {
       // Exemplo/laboratório do TresJS — sem guarda de auth para facilitar testar
       path: '/tres-demo',
       name: 'tres-demo',
