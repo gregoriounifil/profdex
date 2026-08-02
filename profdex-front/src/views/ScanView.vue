@@ -24,7 +24,8 @@ let lastScannedData = null
 let lastScannedAt = 0
 
 // ── Detecta se o dado do QR é um token de captura ─────────────────────────
-// Aceita: "capture:TOKEN" ou URL HTTPS autorizada com path /capture/TOKEN.
+// Aceita: "capture:TOKEN" ou URL autorizada (mesma origem do app, ou uma das
+// origens em VITE_QR_ORIGINS) com path /capture/TOKEN.
 function extractCaptureToken(data) {
   if (!data) return null
 
@@ -39,7 +40,14 @@ function extractCaptureToken(data) {
       .split(',')
       .map((origin) => origin.trim())
       .filter(Boolean)
-    if (url.protocol !== 'https:' || !configuredOrigins.includes(url.origin)) return null
+    // A comparação por `origin` (protocolo + host + porta) já garante que o QR
+    // aponta para um domínio confiável — não é preciso além disso travar em
+    // `https:`. Essa checagem extra bloqueava QUALQUER QR válido sempre que o
+    // app não estava servido por HTTPS (dev local, rede interna via IP etc.),
+    // porque `window.location.origin` nesses casos já é `http://...` e o QR
+    // gerado para aquele ambiente também é `http://...` — mas a comparação de
+    // protocolo rejeitava os dois antes mesmo de checar a origem.
+    if (!configuredOrigins.includes(url.origin)) return null
     const match = url.pathname.match(/\/capture\/(.+)/)
     if (match) return match[1]
   } catch { /* não é URL */ }

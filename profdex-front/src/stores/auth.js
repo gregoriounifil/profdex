@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import api from '../services/api'
+import { applyAuthenticatedSession } from './auth-session'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
@@ -25,7 +26,10 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function setSession(data) {
-    user.value = data.user
+    // Login e cadastro já criaram a sessão no servidor. Marcar a restauração
+    // aqui evita que o primeiro clique dispare /auth/me novamente e apague o
+    // usuário quando a navegação acontece logo após a autenticação.
+    applyAuthenticatedSession(user, hasRestoredSession, data)
   }
 
   async function restoreSession() {
