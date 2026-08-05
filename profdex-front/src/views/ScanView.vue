@@ -3,6 +3,7 @@ import jsQR from 'jsqr'
 import { onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProfessorsStore } from '../stores/professors'
+import { openBackCamera } from '../composables/useBackCamera'
 
 const router = useRouter()
 const store = useProfessorsStore()
@@ -138,8 +139,9 @@ onMounted(async () => {
   }
 
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+    stream = await openBackCamera({
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
     })
     const video = videoRef.value
     video.srcObject = stream
