@@ -17,7 +17,15 @@ import { useAuthStore } from './auth'
 export const useBattleStore = defineStore('battle', () => {
   const connected = ref(false)
   const unauthorized = ref(false)
-  const onlineUsers = ref([])
+
+  // Lobby: por padrão o servidor manda só o TOTAL de gente online. A lista em
+  // si só trafega enquanto a tela de jogadores está aberta — mandar todo mundo
+  // para todo mundo fazia o custo crescer com o quadrado da população e
+  // transformava uma reconexão em massa em queda do servidor.
+  // Ver docs/CARGA-PVP.md.
+  const onlineTotal = ref(0)
+  const lobbyUsers = ref([]) // já vem sem o próprio usuário
+  const lobbySubscribed = ref(false) // intenção: a tela está aberta?
 
   // Convites: um de saída por vez (regra do servidor); vários podem chegar.
   const outgoingInvite = ref(null) // { inviteId, to: {id,name}, expiresAt }
@@ -39,10 +47,12 @@ export const useBattleStore = defineStore('battle', () => {
 
   const auth = useAuthStore()
 
-  // Lista exibida no lobby: todos menos o próprio usuário.
-  const opponents = computed(() =>
-    onlineUsers.value.filter((u) => u.id !== auth.user?.id),
-  )
+  // Lista exibida no lobby (o servidor já exclui o próprio usuário).
+  const opponents = computed(() => lobbyUsers.value)
+
+  // Quantos dá para desafiar, sem precisar da lista carregada — é o número
+  // mostrado no botão da tela de batalha.
+  const opponentCount = computed(() => Math.max(0, onlineTotal.value - 1))
 
   function connect() {
     if (socket) return
@@ -52,15 +62,25 @@ export const useBattleStore = defineStore('battle', () => {
     socket = io(`${base}/battle`, {
       path: '/api/socket.io',
       withCredentials: true,
+      // Backoff largo e bem embaralhado: num evento com centenas de celulares
+      // no mesmo Wi-Fi, uma oscilação derruba todo mundo junto — e com o padrão
+      // (até 5s, jitter 0.5) todos voltariam dentro da mesma janela de segundos,
+      // o que vira um pico de reconexão capaz de derrubar o servidor de novo.
+      reconnectionDelayMax: 30000,
+      randomizationFactor: 0.75,
     })
 
     socket.on('connect', () => {
       connected.value = true
+      // Reconexão cria um socket novo, e as salas do servidor são por socket:
+      // se a tela de jogadores está aberta, é preciso se reinscrever.
+      if (lobbySubscribed.value) subscribeLobby()
     })
 
     socket.on('disconnect', () => {
       connected.value = false
-      onlineUsers.value = []
+      lobbyUsers.value = []
+      onlineTotal.value = 0
       // Convites são efêmeros no servidor; sem conexão eles já não valem.
       outgoingInvite.value = null
       incomingInvites.value = []
@@ -72,18 +92,22 @@ export const useBattleStore = defineStore('battle', () => {
       disconnect()
     })
 
-    socket.on('lobby:snapshot', ({ users }) => {
-      onlineUsers.value = users
+    // Chega sempre (agrupado numa janela de 2s no servidor) — é o que alimenta
+    // o contador da tela sem exigir a lista carregada.
+    socket.on('lobby:count', ({ total }) => {
+      onlineTotal.value = total
     })
 
+    // Só chega enquanto inscrito: fora da tela de jogadores o servidor nem envia.
     socket.on('lobby:update', (update) => {
       if (update.type === 'join') {
-        const rest = onlineUsers.value.filter((u) => u.id !== update.user.id)
-        onlineUsers.value = [...rest, update.user]
+        if (update.user.id === auth.user?.id) return
+        const rest = lobbyUsers.value.filter((u) => u.id !== update.user.id)
+        lobbyUsers.value = [...rest, update.user]
       } else if (update.type === 'leave') {
-        onlineUsers.value = onlineUsers.value.filter((u) => u.id !== update.userId)
+        lobbyUsers.value = lobbyUsers.value.filter((u) => u.id !== update.userId)
       } else if (update.type === 'status') {
-        onlineUsers.value = onlineUsers.value.map((u) =>
+        lobbyUsers.value = lobbyUsers.value.map((u) =>
           u.id === update.userId ? { ...u, status: update.status } : u,
         )
       }
@@ -220,7 +244,9 @@ export const useBattleStore = defineStore('battle', () => {
     socket.disconnect()
     socket = null
     connected.value = false
-    onlineUsers.value = []
+    lobbyUsers.value = []
+    onlineTotal.value = 0
+    lobbySubscribed.value = false
     outgoingInvite.value = null
     incomingInvites.value = []
   }
@@ -241,6 +267,36 @@ export const useBattleStore = defineStore('battle', () => {
         resolve(ack ?? { ok: false, message: 'Resposta inválida do servidor.' })
       })
     })
+  }
+
+  /** Abriu a tela de jogadores: passa a receber a lista e seus eventos. */
+  async function subscribeLobby() {
+    lobbySubscribed.value = true
+    const ack = await command('lobby:subscribe')
+    if (ack.ok) {
+      lobbyUsers.value = ack.users
+      onlineTotal.value = ack.total
+    } else {
+      lastError.value = ack.message
+    }
+    return ack
+  }
+
+  /** Fechou a tela: o servidor para de mandar eventos de presença. */
+  function unsubscribeLobby() {
+    lobbySubscribed.value = false
+    lobbyUsers.value = []
+    if (socket?.connected) socket.emit('lobby:unsubscribe')
+  }
+
+  /** Busca no servidor — o cliente não tem mais a lista inteira para filtrar. */
+  async function searchLobby(term) {
+    const ack = await command('lobby:search', { term })
+    if (ack.ok) {
+      lobbyUsers.value = ack.users
+      onlineTotal.value = ack.total
+    }
+    return ack
   }
 
   async function sendInvite(toUserId) {
@@ -304,14 +360,19 @@ export const useBattleStore = defineStore('battle', () => {
   return {
     connected,
     unauthorized,
-    onlineUsers,
+    onlineTotal,
     opponents,
+    opponentCount,
+    lobbySubscribed,
     outgoingInvite,
     incomingInvites,
     pvp,
     lastError,
     connect,
     disconnect,
+    subscribeLobby,
+    unsubscribeLobby,
+    searchLobby,
     sendInvite,
     acceptInvite,
     declineInvite,

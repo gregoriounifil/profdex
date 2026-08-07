@@ -66,8 +66,9 @@ async function main() {
 
   const sockA = connect(a.cookie)
   const sockB = connect(b.cookie)
-  await waitEvent(sockA, 'lobby:snapshot')
-  await waitEvent(sockB, 'lobby:snapshot')
+  // A conexão entrega só a contagem; a lista em si exige lobby:subscribe.
+  await waitEvent(sockA, 'lobby:count')
+  await waitEvent(sockB, 'lobby:count')
   ok('lobby conectado para os dois')
 
   const recv = waitEvent(sockB, 'invite:received')
