@@ -1,3 +1,4 @@
+import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   BattleRoomService,
@@ -6,6 +7,10 @@ import {
   TURN_TIMEOUT_MS,
 } from './battle-room.service';
 import { RatingService } from './rating.service';
+
+/** Métrica é efeito colateral do fim da batalha: aqui só precisa não explodir. */
+const metricsStub = () =>
+  ({ record: jest.fn().mockReturnValue(0) }) as unknown as MetricsService;
 
 type Emitted = { userId: string; event: string; payload: any };
 
@@ -54,7 +59,7 @@ describe('BattleRoomService', () => {
       }),
     );
 
-    service = new BattleRoomService(prisma, ratingService);
+    service = new BattleRoomService(prisma, ratingService, metricsStub());
     service.configure({
       emitToUser: (userId, event, payload) =>
         emitted.push({ userId, event, payload }),

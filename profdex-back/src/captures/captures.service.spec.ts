@@ -1,8 +1,13 @@
 import { NotFoundException } from '@nestjs/common';
+import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PUBLIC_PROFESSOR_SELECT } from '../professors/public-professor.select';
 import { hashCaptureToken } from './capture-token';
 import { CapturesService } from './captures.service';
+
+/** Métrica é efeito colateral: aqui só precisa não explodir. */
+const metricsStub = () =>
+  ({ record: jest.fn().mockReturnValue(0) }) as unknown as MetricsService;
 
 describe('CapturesService', () => {
   type UpsertArguments = {
@@ -30,7 +35,7 @@ describe('CapturesService', () => {
         findUnique: jest.fn().mockResolvedValue(null),
       },
     };
-    const service = new CapturesService(prisma as unknown as PrismaService);
+    const service = new CapturesService(prisma as unknown as PrismaService, metricsStub());
 
     await expect(service.captureByToken('user-1', token)).rejects.toThrow(
       NotFoundException,
@@ -50,22 +55,30 @@ describe('CapturesService', () => {
     };
     const transaction = {
       discovery: {
+        // null = ainda não existia, então a métrica conta como novidade
+        findUnique: jest.fn().mockResolvedValue(null),
         upsert: jest.fn().mockResolvedValue({ id: 'discovery-1' }),
       },
       capture: {
+        findUnique: jest.fn().mockResolvedValue(null),
         upsert: jest.fn().mockResolvedValue(capture),
       },
     };
     const prisma = {
       professor: {
         findUnique: jest.fn().mockResolvedValue(professor),
+        count: jest.fn().mockResolvedValue(10),
       },
+      capture: { count: jest.fn().mockResolvedValue(1) },
       $transaction: jest.fn(
         (callback: (client: typeof transaction) => unknown) =>
           callback(transaction),
       ),
     };
-    const service = new CapturesService(prisma as unknown as PrismaService);
+    const service = new CapturesService(
+      prisma as unknown as PrismaService,
+      metricsStub(),
+    );
 
     const result = await service.captureByToken('user-1', token);
 
@@ -104,6 +117,9 @@ describe('CapturesService', () => {
     >();
     const transaction = {
       discovery: {
+        findUnique: jest.fn(({ where }: UpsertArguments) =>
+          discoveries.get(JSON.stringify(where.userId_professorId)) ?? null,
+        ),
         upsert: jest.fn(({ where }: UpsertArguments) => {
           const key = JSON.stringify(where.userId_professorId);
           const record = discoveries.get(key) ?? { id: 'discovery-1' };
@@ -112,6 +128,10 @@ describe('CapturesService', () => {
         }),
       },
       capture: {
+        findUnique: jest.fn(
+          ({ where }: UpsertArguments) =>
+            captures.get(JSON.stringify(where.userId_professorId)) ?? null,
+        ),
         upsert: jest.fn(({ where }: UpsertArguments) => {
           const key = JSON.stringify(where.userId_professorId);
           const record = captures.get(key) ?? {
@@ -126,13 +146,18 @@ describe('CapturesService', () => {
     const prisma = {
       professor: {
         findUnique: jest.fn().mockResolvedValue(professor),
+        count: jest.fn().mockResolvedValue(10),
       },
+      capture: { count: jest.fn().mockResolvedValue(1) },
       $transaction: jest.fn(
         (callback: (client: typeof transaction) => unknown) =>
           callback(transaction),
       ),
     };
-    const service = new CapturesService(prisma as unknown as PrismaService);
+    const service = new CapturesService(
+      prisma as unknown as PrismaService,
+      metricsStub(),
+    );
 
     const results = await Promise.all([
       service.captureByToken('user-1', token),
@@ -153,7 +178,7 @@ describe('CapturesService', () => {
         findMany: jest.fn().mockResolvedValue(records),
       },
     };
-    const service = new CapturesService(prisma as unknown as PrismaService);
+    const service = new CapturesService(prisma as unknown as PrismaService, metricsStub());
 
     await expect(service.findAll('user-1')).resolves.toEqual(records);
     expect(prisma.capture.findMany).toHaveBeenCalledWith({

@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { pairKeyOf } from './cooldown.service';
 import {
@@ -68,6 +69,7 @@ export class BattleRoomService implements OnModuleDestroy {
   constructor(
     private prisma: PrismaService,
     private ratings: RatingService,
+    private metrics: MetricsService,
   ) {}
 
   configure(emitter: RoomEmitter): void {
@@ -393,6 +395,27 @@ export class BattleRoomService implements OnModuleDestroy {
         foe: this.combatantView(room, this.otherKey(key), false),
       });
     }
+    // Métrica de engajamento, registrada no servidor: a batalha vale muitos
+    // pontos e o resultado é conhecido aqui, não no cliente. Abandono duplo não
+    // conta — ninguém jogou de verdade.
+    if (outcome.status === 'finished' || winner) {
+      const occurredAt = new Date();
+      for (const key of ['player', 'enemy'] as const) {
+        const me = room.players[key];
+        const eventos: Parameters<MetricsService['record']>[2] = [
+          {
+            type: 'battle_finished',
+            occurredAt,
+            metadata: { battleId: room.id, turns: room.turn },
+          },
+        ];
+        if (winner?.userId === me.userId) {
+          eventos.push({ type: 'battle_won', occurredAt });
+        }
+        this.metrics.record(me.userId, null, eventos);
+      }
+    }
+
     // Linha de auditoria: com a dupla, horários e deltas dá para investigar
     // padrões de win trading além do cooldown (mesma dupla alternando etc.).
     this.logger.log(
