@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useMetricsStore } from '../stores/metrics'
 import { useProfessorsStore } from '../stores/professors'
 
 // Teto para a espera do preload. O `api` não define timeout (axios usa 0 =
@@ -95,6 +96,37 @@ const router = createRouter({
       meta: { auth: true },
     },
     {
+      // Retorno do login com Google para quem ainda não tem conta: o backend
+      // redireciona para cá com o ticket na query. `guest` porque quem chega
+      // aqui ainda não tem sessão.
+      path: '/completar-cadastro',
+      name: 'completar-cadastro',
+      component: () => import('../views/CompletarCadastroView.vue'),
+      meta: { guest: true },
+    },
+    {
+      path: '/esqueci-senha',
+      name: 'esqueci-senha',
+      component: () => import('../views/EsqueciSenhaView.vue'),
+      meta: { guest: true },
+    },
+    {
+      // Destino do link enviado por e-mail (token na query).
+      path: '/redefinir-senha',
+      name: 'redefinir-senha',
+      component: () => import('../views/RedefinirSenhaView.vue'),
+      meta: { guest: true },
+    },
+    {
+      // Painel de métricas — somente leitura, só para contas @unifil.br.
+      // O `meta.admin` esconde a tela; quem manda de verdade é o AdminGuard
+      // do servidor, que confere o papel no banco a cada request.
+      path: '/admin/metricas',
+      name: 'admin-metricas',
+      component: () => import('../views/AdminMetricsView.vue'),
+      meta: { auth: true, admin: true },
+    },
+    {
       // Exemplo/laboratório do TresJS — sem guarda de auth para facilitar testar
       path: '/tres-demo',
       name: 'tres-demo',
@@ -144,6 +176,38 @@ router.beforeEach(async (to) => {
 
   if (to.meta.guest && auth.isAuthenticated) {
     return { name: 'profdex' }
+  }
+
+  // Conveniência de navegação, não segurança: o backend recusa a rota de
+  // qualquer jeito para quem não é admin.
+  if (to.meta.admin && auth.user?.role !== 'admin') {
+    return { name: 'profdex' }
+  }
+})
+
+// ── Métricas de navegação ───────────────────────────────────────────────────
+// Um `screen_view` por tela, com o tempo que o aluno ficou nela. Medir aqui, no
+// router, cobre o app inteiro sem espalhar instrumentação por cada view.
+let telaAtual = null
+let telaDesde = 0
+
+router.afterEach((to) => {
+  const metrics = useMetricsStore()
+  const auth = useAuthStore()
+
+  // A sessão de uso nasce no primeiro acesso autenticado.
+  if (auth.isAuthenticated) void metrics.start()
+
+  const agora = Date.now()
+  if (telaAtual && telaAtual !== to.name) {
+    metrics.track('screen_view', {
+      durationMs: agora - telaDesde,
+      metadata: { screen: telaAtual },
+    })
+  }
+  if (telaAtual !== to.name) {
+    telaAtual = to.name
+    telaDesde = agora
   }
 })
 

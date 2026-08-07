@@ -1,10 +1,21 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { resolveApiBaseUrl } from '../services/api-base-url'
 
 const router = useRouter()
 const auth = useAuthStore()
+
+// Precisa ser a URL absoluta do backend: o navegador sai da aplicação, vai ao
+// Google e volta. Por isso não passa pelo cliente axios.
+const googleLoginUrl = computed(() => {
+  const base = resolveApiBaseUrl({
+    isDevelopment: import.meta.env.DEV,
+    configuredUrl: import.meta.env.VITE_API_URL,
+  })
+  return `${base}/auth/google`
+})
 
 const matricula = ref('')
 const password = ref('')
@@ -74,6 +85,21 @@ async function submit() {
         </button>
       </form>
 
+      <div class="auth-alt">
+        <RouterLink to="/esqueci-senha" class="pk-link pk-link--small">
+          Esqueci minha senha
+        </RouterLink>
+      </div>
+
+      <!-- Login institucional. É um link, não fetch: o fluxo OAuth precisa de
+           navegação de verdade até o Google e de volta. -->
+      <div class="auth-divider"><span>ou</span></div>
+      <a :href="googleLoginUrl" class="btn-google">
+        <span class="btn-google__g">G</span>
+        <span>Entrar com e-mail institucional</span>
+      </a>
+      <p class="auth-hint">Use seu @edu.unifil.br ou @unifil.br</p>
+
       <div class="auth-footer">
         <span>Não tem conta?</span>
         <RouterLink to="/register" class="pk-link">Cadastre-se</RouterLink>
@@ -96,6 +122,73 @@ async function submit() {
   flex-direction: column;
   background-color: var(--bg-deep);
   color: var(--text-primary);
+}
+
+/* Login institucional e recuperação de senha */
+.auth-alt {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.pk-link--small {
+  font-size: 9px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 12px;
+  color: var(--text-muted, #888);
+  font-size: 9px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.35;
+}
+
+.btn-google {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 14px;
+  background: #fff;
+  color: #202124;
+  border: 3px solid #202124;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 9px;
+  line-height: 1.5;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn-google:active {
+  transform: translateY(2px);
+}
+
+.btn-google__g {
+  font-size: 16px;
+  font-weight: 900;
+  color: #4285f4;
+}
+
+.auth-hint {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 8px;
+  line-height: 1.6;
+  color: var(--text-muted, #888);
 }
 
 /* Header Vermelho Sólido */

@@ -1,9 +1,21 @@
+import { ConfigService } from '@nestjs/config';
 import { UnauthorizedException } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthRateLimitService } from './auth-rate-limit.service';
 import { SESSION_COOKIE_NAME } from './auth-session';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { GoogleAuthService } from './google-auth.service';
+import { PasswordResetService } from './password-reset.service';
+
+// Colaboradores que estes testes não exercitam — só precisam existir para o
+// construtor. Os fluxos do Google e de redefinição têm cobertura própria.
+const googleStub = () =>
+  ({ resolve: jest.fn(), completeSignup: jest.fn() }) as unknown as GoogleAuthService;
+const passwordResetStub = () =>
+  ({ request: jest.fn(), reset: jest.fn() }) as unknown as PasswordResetService;
+const configStub = () =>
+  ({ get: jest.fn().mockReturnValue('http://localhost:5173') }) as unknown as ConfigService;
 
 describe('AuthController', () => {
   const user = { id: 'user-1', matricula: '123', name: 'Player' };
@@ -21,6 +33,9 @@ describe('AuthController', () => {
     const controller = new AuthController(
       auth as unknown as AuthService,
       rateLimit as unknown as AuthRateLimitService,
+      googleStub(),
+      passwordResetStub(),
+      configStub(),
     );
     const response = {
       cookie: jest.fn(),
