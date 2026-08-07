@@ -37,6 +37,9 @@ lerna-debug.log*
 
 # dotenv environment variable files
 .env
+# backups do .env também carregam segredos (JWT_SECRET, credenciais do banco)
+.env.bak
+.env.*.bak
 .env.development.local
 .env.test.local
 .env.production.local
