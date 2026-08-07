@@ -1,6 +1,6 @@
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs';
+import * as bcrypt from '@node-rs/bcrypt';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
 

@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import * as bcrypt from 'bcryptjs';
+// `@node-rs/bcrypt` (nativo, roda na threadpool do libuv) e não `bcryptjs`
+// (JS puro, síncrono na thread principal): 20 hashes simultâneos com o bcryptjs
+// congelam o event loop por ~1,3s — nenhum websocket atendido, nenhum timer de
+// turno disparado. Ver docs/CARGA-PVP.md. O formato do hash é o mesmo, então
+// senhas já cadastradas continuam válidas.
+import * as bcrypt from '@node-rs/bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()

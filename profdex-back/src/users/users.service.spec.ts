@@ -1,4 +1,4 @@
-import * as bcrypt from 'bcryptjs';
+import * as bcrypt from '@node-rs/bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from './users.service';
 
@@ -36,7 +36,7 @@ describe('UsersService', () => {
 
     expect(result.password).not.toBe('valid password');
     await expect(
-      bcrypt.compare('valid password', result.password),
+      bcrypt.verify('valid password', result.password),
     ).resolves.toBe(true);
     expect(prisma.user.create).toHaveBeenCalledWith({
       data: {
