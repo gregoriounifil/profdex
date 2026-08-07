@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
+import { BattleModule } from './battle/battle.module';
 import { CapturesModule } from './captures/captures.module';
 import { DiscoveriesModule } from './discoveries/discoveries.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -14,6 +15,7 @@ import { UsersModule } from './users/users.module';
     PrismaModule,
     UsersModule,
     AuthModule,
+    BattleModule,
     ProfessorsModule,
     DiscoveriesModule,
     CapturesModule,

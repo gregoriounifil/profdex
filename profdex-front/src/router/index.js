@@ -75,6 +75,20 @@ const router = createRouter({
       meta: { auth: true },
     },
     {
+      // PvP: seleção às cegas do professor (após aceitar um convite)
+      path: '/batalha/pvp/escolha',
+      name: 'pvp-pick',
+      component: () => import('../views/PvpPickView.vue'),
+      meta: { auth: true },
+    },
+    {
+      // PvP: arena por turnos (o estado vem do socket; F5 → resync do servidor)
+      path: '/batalha/pvp/arena',
+      name: 'pvp-arena',
+      component: () => import('../views/PvpArenaView.vue'),
+      meta: { auth: true },
+    },
+    {
       path: '/ranking',
       name: 'ranking',
       component: () => import('../views/RankingView.vue'),

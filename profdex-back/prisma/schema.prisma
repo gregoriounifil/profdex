@@ -17,7 +17,45 @@ model User {
   discoveries Discovery[]
   captures    Capture[]
 
+  // PvP ranqueado — Elo com início/piso 1000 (ver docs/BATALHA-PVP.md)
+  battleRating Int      @default(1000) @map("battle_rating")
+  battleWins   Int      @default(0) @map("battle_wins")
+  battleLosses Int      @default(0) @map("battle_losses")
+  battleDraws  Int      @default(0) @map("battle_draws")
+  battlesAsA   Battle[] @relation("BattlesAsPlayerA")
+  battlesAsB   Battle[] @relation("BattlesAsPlayerB")
+
+  @@index([battleRating(sort: Desc)])
   @@map("users")
+}
+
+// Uma batalha PvP. Criada quando os dois jogadores confirmam o professor
+// (status `active`) e fechada com resultado + deltas de Elo. `pairKey` é o par
+// de ids em ordem lexicográfica ("menor:maior") — permite consultar o cooldown
+// de 12h da dupla com um índice simples, sem OR nas duas ordens.
+// `winnerId` fica sem FK de propósito: é sempre um dos dois jogadores e uma
+// terceira relação com User só adicionaria ruído ao schema.
+model Battle {
+  id           String    @id @default(uuid())
+  pairKey      String    @map("pair_key")
+  playerAId    String    @map("player_a_id")
+  playerBId    String    @map("player_b_id")
+  professorAId String    @map("professor_a_id")
+  professorBId String    @map("professor_b_id")
+  status       String // active | finished | abandoned | annulled
+  winnerId     String?   @map("winner_id") // null = empate ou anulada
+  ratingDeltaA Int?      @map("rating_delta_a")
+  ratingDeltaB Int?      @map("rating_delta_b")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  finishedAt   DateTime? @map("finished_at")
+
+  playerA    User      @relation("BattlesAsPlayerA", fields: [playerAId], references: [id])
+  playerB    User      @relation("BattlesAsPlayerB", fields: [playerBId], references: [id])
+  professorA Professor @relation("BattleProfessorA", fields: [professorAId], references: [id])
+  professorB Professor @relation("BattleProfessorB", fields: [professorBId], references: [id])
+
+  @@index([pairKey, finishedAt])
+  @@map("battles")
 }
 
 model Professor {
@@ -30,6 +68,8 @@ model Professor {
   marker2Index     Int         @map("marker2_index")
   discoveries      Discovery[]
   captures         Capture[]
+  battlesAsA       Battle[]    @relation("BattleProfessorA")
+  battlesAsB       Battle[]    @relation("BattleProfessorB")
 
   @@map("professors")
 }

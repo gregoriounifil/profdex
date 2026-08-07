@@ -24,6 +24,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   ],
   controllers: [AuthController],
   providers: [AuthService, AuthRateLimitService, JwtStrategy, JwtAuthGuard],
-  exports: [JwtAuthGuard],
+  // JwtModule exportado para o BattleModule verificar a sessão no handshake
+  // do WebSocket com o MESMO segredo/config — sem duplicar registerAsync.
+  exports: [JwtAuthGuard, JwtModule],
 })
 export class AuthModule {}

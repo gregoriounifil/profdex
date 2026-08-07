@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import BattleHpBar from '../components/BattleHpBar.vue'
 import BinaryTunnelScene from '../components/BinaryTunnelScene.vue'
 import { useBattle } from '../composables/useBattle.js'
+import { openBackCamera } from '../composables/useBackCamera.js'
 import { useProfessorsStore } from '../stores/professors'
 import { buildMoveset } from '../data/moves.js'
 import {
@@ -49,10 +50,7 @@ let camStream = null
 async function startCamera() {
   arError.value = null
   try {
-    camStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' } },
-      audio: false,
-    })
+    camStream = await openBackCamera()
     const v = camVideo.value
     if (v) {
       v.srcObject = camStream

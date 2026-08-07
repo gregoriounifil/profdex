@@ -3,6 +3,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
+import basicSsl from '@vitejs/plugin-basic-ssl'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -26,8 +27,19 @@ export default defineConfig(({ mode }) => {
   // backend por cookie: DEV_API_PROXY_TARGET=https://profdex-production.up.railway.app
   const apiProxyTarget = env.DEV_API_PROXY_TARGET || 'http://localhost:3000'
 
+  // `HTTPS=1` (em `.env.local`) faz o dev server servir por HTTPS com um
+  // certificado autoassinado. Isso só é necessário para testar no CELULAR: a
+  // câmera (`getUserMedia`, usada no scanner de QR e na arena AR) exige contexto
+  // seguro, e abrir o app por `http://<ip-da-rede>:5173` não é contexto seguro.
+  // No desktop, `localhost` já conta como seguro — pode deixar desligado.
+  //
+  // O certificado é autoassinado, então o navegador do celular mostra um aviso
+  // na primeira visita. Basta avançar ("Avançado" → "Ir para o site").
+  const useHttps = env.HTTPS === '1'
+
   return {
     plugins: [
+      ...(useHttps ? [basicSsl()] : []),
       vue({
         template: {
           compilerOptions: {
@@ -56,6 +68,10 @@ export default defineConfig(({ mode }) => {
           target: apiProxyTarget,
           changeOrigin: true,
           secure: true,
+          // Repassa também o upgrade de WebSocket: o Socket.IO do lobby de
+          // batalha faz handshake em /api/socket.io (sob /api por causa do
+          // `path` do cookie de sessão).
+          ws: true,
         },
       },
     },

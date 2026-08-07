@@ -14,7 +14,14 @@ export function getSessionCookieOptions(isProduction: boolean): CookieOptions {
 }
 
 export function extractSessionToken(request: Request): string | null {
-  const cookieHeader = request.headers.cookie;
+  return extractSessionTokenFromCookieHeader(request.headers.cookie);
+}
+
+// Versão que recebe o header cru — usada também no handshake do WebSocket,
+// onde não existe um Request do Express (só `handshake.headers`).
+export function extractSessionTokenFromCookieHeader(
+  cookieHeader: string | undefined,
+): string | null {
   if (!cookieHeader) return null;
 
   for (const cookie of cookieHeader.split(';')) {

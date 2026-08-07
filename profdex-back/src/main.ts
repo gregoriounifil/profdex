@@ -10,6 +10,10 @@ import {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // SIGTERM/SIGINT (deploy, Ctrl+C) disparam onModuleDestroy — o módulo de
+  // batalha usa isso para anular partidas ativas em vez de deixá-las órfãs.
+  app.enableShutdownHooks();
+
   app.setGlobalPrefix('api');
 
   app.enableCors({

@@ -22,6 +22,9 @@ export const useAuthStore = defineStore('auth', () => {
   function logout() {
     user.value = null
     hasRestoredSession.value = true
+    // Mesmo evento do 401: derruba recursos presos à sessão (ex.: o socket de
+    // presença do lobby de batalha) sem acoplar este store aos interessados.
+    window.dispatchEvent(new CustomEvent('auth:expired'))
     return api.post('/auth/logout').catch(() => {})
   }
 
