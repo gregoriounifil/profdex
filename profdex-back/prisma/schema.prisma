@@ -17,6 +17,15 @@ model User {
   discoveries Discovery[]
   captures    Capture[]
 
+  // Login com Google (opcional — matrícula/senha continua valendo).
+  // `email` fica único para uma conta institucional não virar duas; `googleId`
+  // é o identificador estável do Google (o e-mail pode ser renomeado).
+  // Só e-mails @edu.unifil.br e @unifil.br entram — ver institutional-domains.ts
+  email         String?             @unique
+  googleId      String?             @unique @map("google_id")
+  emailVerified Boolean             @default(false) @map("email_verified")
+  resetTokens   PasswordResetToken[]
+
   // PvP ranqueado — Elo com início/piso 1000 (ver docs/BATALHA-PVP.md)
   battleRating Int      @default(1000) @map("battle_rating")
   battleWins   Int      @default(0) @map("battle_wins")
@@ -25,8 +34,92 @@ model User {
   battlesAsA   Battle[] @relation("BattlesAsPlayerA")
   battlesAsB   Battle[] @relation("BattlesAsPlayerB")
 
+  // Métricas de engajamento (ver docs/METRICAS.md)
+  // `role`: "aluno" | "admin" — admin é derivado do domínio do e-mail
+  // institucional (@unifil.br sem o edu) e só dá acesso de LEITURA ao painel.
+  role            String        @default("aluno")
+  engagementScore Int           @default(0) @map("engagement_score")
+  sessions        UserSession[]
+  events          AppEvent[]
+
   @@index([battleRating(sort: Desc)])
+  @@index([engagementScore(sort: Desc)])
   @@map("users")
+}
+
+// Uma "sessão de uso": da abertura do app até o abandono. `activeMs` só conta
+// tempo com a aba VISÍVEL — sem isso, quem deixa o app aberto a noite toda
+// domina qualquer métrica de tempo e a torna inútil.
+// Sessões sem heartbeat há tempo demais são encerradas por varredura.
+model UserSession {
+  id         String     @id @default(uuid())
+  userId     String     @map("user_id")
+  startedAt  DateTime   @default(now()) @map("started_at")
+  lastSeenAt DateTime   @default(now()) @map("last_seen_at")
+  endedAt    DateTime?  @map("ended_at")
+  activeMs   Int        @default(0) @map("active_ms")
+  userAgent  String?    @map("user_agent")
+  user       User       @relation(fields: [userId], references: [id])
+  events     AppEvent[]
+
+  @@index([userId, startedAt])
+  @@index([startedAt])
+  // Varredura de sessões órfãs: acha as abertas e paradas sem varrer a tabela.
+  @@index([endedAt, lastSeenAt])
+  @@map("user_sessions")
+}
+
+// Fluxo bruto de interações. É a trilha de auditoria — o painel NUNCA lê daqui,
+// lê de MetricHourly. Gravado em lote pelo servidor, não uma linha por request.
+model AppEvent {
+  id         String       @id @default(uuid())
+  userId     String       @map("user_id")
+  sessionId  String?      @map("session_id")
+  type       String
+  occurredAt DateTime     @map("occurred_at")
+  durationMs Int?         @map("duration_ms")
+  metadata   Json?
+  user       User         @relation(fields: [userId], references: [id])
+  session    UserSession? @relation(fields: [sessionId], references: [id])
+
+  @@index([type, occurredAt])
+  @@index([userId, occurredAt])
+  @@index([occurredAt])
+  @@map("app_events")
+}
+
+// Agregado horário pré-calculado. Formato chave-valor de propósito: métrica
+// nova não exige migração. O painel lê só daqui, então continua barato mesmo
+// com milhões de eventos brutos acumulados.
+model MetricHourly {
+  id     String   @id @default(uuid())
+  bucket DateTime // início da hora (UTC)
+  metric String
+  value  Int
+
+  @@unique([bucket, metric])
+  @@index([bucket])
+  @@map("metrics_hourly")
+}
+
+// Token de redefinição de senha.
+//
+// Guardamos apenas o HASH: um vazamento do banco não pode virar tomada de
+// contas. O token em claro só existe no link enviado por e-mail.
+// `usedAt` garante uso único — sem isso, quem tivesse acesso ao e-mail poderia
+// reusar o mesmo link indefinidamente.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 // Uma batalha PvP. Criada quando os dois jogadores confirmam o professor
