@@ -17,8 +17,11 @@ const path = require('node:path')
 const { createHash, randomBytes } = require('node:crypto')
 const QRCode = require('qrcode')
 const { PrismaClient } = require('@prisma/client')
+const { requireDatabaseUrl } = require('./db-url')
 
-const db = new PrismaClient()
+const db = new PrismaClient({
+  datasources: { db: { url: requireDatabaseUrl() } },
+})
 
 const OUT_DIR = path.resolve(__dirname, '..', 'qr-out')
 const args = process.argv.slice(2)
@@ -38,7 +41,6 @@ function hash(token) {
 
 function describeDatabase() {
   const url = process.env.DATABASE_URL || ''
-  if (url.startsWith('file:')) return `SQLite local (${url})`
   try {
     const { host, pathname } = new URL(url)
     return `${host}${pathname}`

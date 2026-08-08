@@ -10,13 +10,13 @@
  *
  * Cria usuários descartáveis (smoke-*) e capturas para eles no banco local.
  */
-const path = require('node:path')
 const { io } = require('socket.io-client')
 const { PrismaClient } = require('@prisma/client')
+const { requireDatabaseUrl } = require('./db-url')
 
 const API = process.env.SMOKE_API || 'http://localhost:3000/api'
 const WS = (process.env.SMOKE_API || 'http://localhost:3000').replace(/\/api$/, '') + '/battle'
-const DB_URL = process.env.DATABASE_URL || `file:${path.resolve(__dirname, '../prisma/dev.db')}`
+const DB_URL = requireDatabaseUrl()
 
 const fail = (msg) => { console.error('FALHOU:', msg); process.exit(1) }
 const ok = (msg) => console.log('OK:', msg)

@@ -1,3 +1,8 @@
+// Carrega o .env: este arquivo roda via `ts-node` direto (npm run db:seed), e
+// nesse caminho ninguém popula process.env — o @prisma/client não lê .env
+// sozinho, só o CLI do Prisma lê. Sem isto, "Environment variable not found:
+// DATABASE_URL".
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
