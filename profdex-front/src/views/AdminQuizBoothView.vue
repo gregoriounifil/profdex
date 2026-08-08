@@ -82,7 +82,6 @@ const temasExibidos = computed(() =>
     return {
       ...t,
       questoes: dados?.questoes ?? 0,
-      professores: dados?.professores ?? [],
       esperaSegundos: espera?.segundosRestantes ?? 0,
     }
   }),
@@ -338,9 +337,10 @@ function formatarEspera(s) {
             aguarde {{ formatarEspera(t.esperaSegundos) }}
           </span>
           <span v-else-if="!t.questoes" class="carta__aviso">sem questões</span>
-          <span v-else-if="t.professores.length" class="carta__aviso">
-            {{ t.professores.map((p) => p.name).join(', ') }}
-          </span>
+          <!-- O professor daquele tema NÃO aparece aqui: o aluno está olhando a
+               tela e escolheria o tema pelo professor que ainda falta capturar,
+               não pelo assunto. Ele só descobre quem procurar depois de acertar,
+               na tela de resultado. -->
         </button>
       </div>
     </section>
