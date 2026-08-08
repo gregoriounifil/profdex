@@ -191,6 +191,15 @@ describe('BattleRoomService', () => {
     await startBattle();
     const beginA = eventsFor(ana.userId, 'battle:begin')[0].payload;
 
+    // Ana joga sempre o golpe utilitário do deck. `buildMoveset` embaralha os
+    // golpes, então pegar `moves[0]` sortearia um ATAQUE qualquer — e um golpe
+    // forte derruba Bia na 2ª rodada, encerrando por 'nocaute' antes de o
+    // contador de faltas chegar a 3 (era daí que vinha a intermitência deste
+    // teste). O moveset sempre traz exatamente 1 golpe fora de ATAQUE, e sem
+    // dano não existe KO: só o abandono pode terminar a batalha.
+    const harmless = (moves: any[]) =>
+      moves.find((m) => m.category !== 'ataque') ?? moves[0];
+
     for (let i = 0; i < MAX_MISSED_TURNS; i++) {
       const ended = eventsFor(ana.userId, 'battle:end').length > 0;
       if (ended) break;
@@ -200,7 +209,7 @@ describe('BattleRoomService', () => {
       )?.payload;
       const moves =
         (beginPayload ?? roundPayload)?.you?.moves ?? beginA.you.moves;
-      service.move(ana.userId, moves[0].id); // Ana joga; Bia some
+      service.move(ana.userId, harmless(moves).id); // Ana joga; Bia some
       jest.advanceTimersByTime(TURN_TIMEOUT_MS);
       await Promise.resolve();
       await Promise.resolve();
