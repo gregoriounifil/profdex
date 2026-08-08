@@ -7,10 +7,15 @@
  * próximo aluno. A matrícula é pedida SEMPRE, porque quem responde muda a cada
  * rodada e nunca há sessão do aluno aqui.
  *
+ * A matrícula entra por um numpad na tela, não pelo teclado: o aparelho fica
+ * deitado na mesa virado para o aluno, e um <input> focado faria o teclado
+ * virtual cobrir metade do quiosque. Não há campo de texto nenhum aqui — o
+ * visor é só um espelho do valor digitado.
+ *
  * O cronômetro daqui é conforto visual: quem decide se o tempo acabou é o
  * servidor, na hora de conferir a resposta.
  */
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../services/api'
 import { TYPE_CYCLE, getType } from '../data/types'
@@ -64,9 +69,7 @@ onBeforeUnmount(pararCronometro)
 
 // ── Fluxo ───────────────────────────────────────────────────────────────────
 
-const temaAtual = computed(() =>
-  sessao.value ? getType(sessao.value.question.theme) : null,
-)
+const temaAtual = computed(() => (sessao.value ? getType(sessao.value.question.theme) : null))
 
 const cor = computed(() => temaAtual.value?.color ?? 'var(--red)')
 
@@ -84,6 +87,50 @@ const temasExibidos = computed(() =>
     }
   }),
 )
+
+// ── Numpad ──────────────────────────────────────────────────────────────────
+// O servidor aceita até 40 caracteres, mas matrícula real é numérica e curta;
+// o teto aqui só evita que uma criança segurando a tecla encha o visor.
+const MAX_DIGITOS = 20
+const TECLAS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
+
+function digitar(digito) {
+  if (matricula.value.length >= MAX_DIGITOS) return
+  matricula.value += digito
+  // O erro é do valor anterior: some assim que o operador começa a corrigir.
+  erro.value = ''
+}
+
+function apagar() {
+  matricula.value = matricula.value.slice(0, -1)
+  erro.value = ''
+}
+
+function limpar() {
+  matricula.value = ''
+  erro.value = ''
+}
+
+/**
+ * O teclado físico continua valendo — o numpad é o caminho principal, não uma
+ * proibição. Sem <input> na tela não há nada com foco para receber as teclas,
+ * então o listener é da janela e só age na etapa da matrícula.
+ */
+function aoTeclar(e) {
+  if (etapa.value !== 'matricula' || carregando.value) return
+  if (e.ctrlKey || e.metaKey || e.altKey) return
+
+  if (e.key >= '0' && e.key <= '9' && e.key.length === 1) digitar(e.key)
+  else if (e.key === 'Backspace') apagar()
+  else if (e.key === 'Escape') limpar()
+  else if (e.key === 'Enter') void identificar()
+  else return
+
+  e.preventDefault()
+}
+
+onMounted(() => window.addEventListener('keydown', aoTeclar))
+onBeforeUnmount(() => window.removeEventListener('keydown', aoTeclar))
 
 function mensagemDeErro(e, padrao) {
   if (!e.response) return 'Sem conexão com o servidor.'
@@ -189,31 +236,71 @@ function formatarEspera(s) {
 <template>
   <div class="bancada" :style="{ '--tema': cor }">
     <!-- ── Matrícula ──────────────────────────────────────────────────── -->
-    <section v-if="etapa === 'matricula'" class="cena cena--centro">
+    <section v-if="etapa === 'matricula'" class="cena cena--matricula">
       <button class="sair" type="button" @click="router.push({ name: 'admin-quiz' })">
         ← Painel
       </button>
 
-      <h1 class="pixel marca">QUIZ PROFDEX</h1>
-      <p class="chamada">Digite a matrícula do aluno para começar</p>
+      <div class="identidade">
+        <h1 class="pixel marca">QUIZ PROFDEX</h1>
+        <p class="chamada">Digite sua matrícula<br />para começar</p>
 
-      <form class="form-matricula" @submit.prevent="identificar">
-        <input
-          v-model="matricula"
-          class="entrada"
-          type="text"
-          inputmode="numeric"
-          autocomplete="off"
-          autofocus
-          placeholder="MATRÍCULA"
-          aria-label="Matrícula do aluno"
-        />
-        <button class="acao" type="submit" :disabled="carregando || !matricula.trim()">
+        <div class="visor" role="status" aria-live="polite">
+          <span class="visor__rotulo">MATRÍCULA</span>
+          <span v-if="matricula" class="visor__valor">{{ matricula }}</span>
+          <span v-else class="visor__vazio" aria-hidden="true">— — — — — —</span>
+          <span class="visor__cursor" aria-hidden="true"></span>
+        </div>
+
+        <p v-if="erro" class="erro" role="alert">{{ erro }}</p>
+        <p v-else class="dica">Use os números ao lado. Errou? Toque em ⌫</p>
+      </div>
+
+      <div class="painel-teclas">
+        <div class="numpad">
+          <button
+            v-for="tecla in TECLAS"
+            :key="tecla"
+            class="tecla"
+            type="button"
+            :disabled="carregando"
+            @click="digitar(tecla)"
+          >
+            {{ tecla }}
+          </button>
+
+          <button
+            class="tecla tecla--auxiliar"
+            type="button"
+            :disabled="carregando || !matricula"
+            aria-label="Apagar último dígito"
+            @click="apagar"
+          >
+            ⌫
+          </button>
+          <button class="tecla" type="button" :disabled="carregando" @click="digitar('0')">
+            0
+          </button>
+          <button
+            class="tecla tecla--auxiliar"
+            type="button"
+            :disabled="carregando || !matricula"
+            aria-label="Limpar matrícula"
+            @click="limpar"
+          >
+            C
+          </button>
+        </div>
+
+        <button
+          class="acao acao--continuar"
+          type="button"
+          :disabled="carregando || !matricula"
+          @click="identificar"
+        >
           {{ carregando ? 'BUSCANDO…' : 'CONTINUAR' }}
         </button>
-      </form>
-
-      <p v-if="erro" class="erro" role="alert">{{ erro }}</p>
+      </div>
     </section>
 
     <!-- ── Escolha do tema ────────────────────────────────────────────── -->
@@ -225,9 +312,7 @@ function formatarEspera(s) {
           <span class="topo__matricula">{{ aluno.matricula }}</span>
         </div>
         <div class="topo__direita">
-          <span class="topo__placar">
-            {{ aluno.acertos }}/{{ aluno.tentativas }} acertos
-          </span>
+          <span class="topo__placar"> {{ aluno.acertos }}/{{ aluno.tentativas }} acertos </span>
           <button class="sair sair--inline" type="button" @click="proximoAluno">
             Trocar aluno
           </button>
@@ -263,16 +348,12 @@ function formatarEspera(s) {
     <!-- ── Pergunta ───────────────────────────────────────────────────── -->
     <section v-else-if="etapa === 'pergunta'" class="cena cena--pergunta">
       <header class="faixa">
-        <span class="faixa__tema">
-          {{ temaAtual?.icon }} {{ temaAtual?.label }}
-        </span>
+        <span class="faixa__tema"> {{ temaAtual?.icon }} {{ temaAtual?.label }} </span>
         <span class="faixa__nivel">
           {{ DIFICULDADES[sessao.question.difficulty] }}
         </span>
         <span class="faixa__aluno">{{ sessao.aluno.name }}</span>
-        <span class="relogio" :class="{ 'relogio--apertado': apertado }">
-          {{ segundos }}s
-        </span>
+        <span class="relogio" :class="{ 'relogio--apertado': apertado }"> {{ segundos }}s </span>
       </header>
 
       <div class="barra" aria-hidden="true">
@@ -330,17 +411,14 @@ function formatarEspera(s) {
         Procure o QR Code do professor deste tema para capturar.
       </p>
       <p v-else class="instrucao">
-        Este tema libera de novo em 10 minutos. Enquanto isso dá para tentar
-        outro tema.
+        Este tema libera de novo em 10 minutos. Enquanto isso dá para tentar outro tema.
       </p>
 
       <div class="botoes">
         <button class="acao acao--secundaria" type="button" @click="voltarAosTemas">
           OUTRO TEMA
         </button>
-        <button class="acao" type="button" @click="proximoAluno">
-          PRÓXIMO ALUNO
-        </button>
+        <button class="acao" type="button" @click="proximoAluno">PRÓXIMO ALUNO</button>
       </div>
     </section>
   </div>
@@ -414,29 +492,156 @@ function formatarEspera(s) {
   font-size: clamp(13px, 1.6vw, 18px);
 }
 
-/* Matrícula */
-.form-matricula {
+/* ── Matrícula: visor à esquerda, numpad à direita ─────────────────────────
+   Duas colunas porque o quiosque vive deitado: empilhado, o numpad desceria
+   abaixo da dobra e o operador teria de rolar a tela a cada aluno. */
+.cena--matricula {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(24px, 5vw, 72px);
+}
+
+.identidade {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  width: min(560px, 90vw);
+  align-items: flex-start;
+  gap: clamp(10px, 2vh, 22px);
+  min-width: 0;
 }
 
-.entrada {
-  min-height: clamp(60px, 9vh, 88px);
-  padding: 0 20px;
+.visor {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  min-height: clamp(72px, 11vh, 112px);
+  padding: clamp(10px, 1.6vh, 18px) clamp(16px, 2vw, 28px);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 3px solid rgba(255, 255, 255, 0.2);
+}
+
+.visor__rotulo {
+  flex-shrink: 0;
+  font-size: clamp(9px, 1vw, 12px);
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.visor__valor,
+.visor__vazio {
+  min-width: 0;
+  /* tabular-nums: o visor não muda de largura enquanto o aluno digita. */
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(30px, 5vw, 60px);
+  font-weight: 800;
+  letter-spacing: clamp(2px, 0.6vw, 8px);
+  overflow-wrap: anywhere;
+}
+
+.visor__valor {
+  color: var(--yellow, #f7c948);
+}
+
+.visor__vazio {
+  color: rgba(255, 255, 255, 0.16);
+}
+
+.visor__cursor {
+  width: 3px;
+  height: clamp(26px, 4vw, 48px);
+  background: var(--yellow, #f7c948);
+  animation: piscar 1.1s steps(2, start) infinite;
+}
+
+@keyframes piscar {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .visor__cursor {
+    animation: none;
+  }
+}
+
+.dica {
+  margin: 0;
+  font-size: clamp(11px, 1.3vw, 15px);
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.painel-teclas {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.4vh, 14px);
+  width: min(420px, 42vw);
+}
+
+.numpad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(8px, 1.4vh, 14px);
+}
+
+.tecla {
+  min-height: clamp(54px, 8.5vh, 96px);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 3px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  border: 3px solid rgba(255, 255, 255, 0.16);
   color: #fff;
-  font-size: clamp(24px, 4vw, 40px);
-  letter-spacing: 4px;
-  text-align: center;
+  font-size: clamp(22px, 3.4vw, 40px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  /* O alvo é o dedo de quem está do outro lado da mesa: sem seleção acidental
+     e sem o atraso de 300ms do duplo-toque. */
+  user-select: none;
+  touch-action: manipulation;
 }
 
-.entrada:focus {
-  outline: none;
-  border-color: var(--yellow, #f7c948);
+.tecla:active:not(:disabled) {
+  background: color-mix(in srgb, var(--tema) 42%, transparent);
+  border-color: var(--tema);
+  transform: translateY(2px);
+}
+
+.tecla:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.tecla--auxiliar {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: clamp(18px, 2.6vw, 30px);
+}
+
+.acao--continuar {
+  width: 100%;
+}
+
+/* Telas estreitas ou em pé: uma coluna só, visor em cima do numpad. */
+@media (max-width: 820px), (orientation: portrait) {
+  .cena--matricula {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    align-content: center;
+  }
+
+  .identidade {
+    align-items: center;
+    text-align: center;
+    width: min(420px, 90vw);
+  }
+
+  .painel-teclas {
+    width: min(420px, 90vw);
+  }
 }
 
 .acao {
