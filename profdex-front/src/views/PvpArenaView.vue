@@ -1,11 +1,10 @@
 <script setup>
-import '@google/model-viewer'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import BattleHpBar from '../components/BattleHpBar.vue'
 import BinaryTunnelScene from '../components/BinaryTunnelScene.vue'
 import { useBattleStore } from '../stores/battle'
-import { modelUrlForProfessor } from '../data/professorModels'
+import { spriteUrlForProfessor } from '../data/professorSprites'
 import { getType } from '../data/types'
 
 // Arena PvP: o servidor resolve tudo; esta tela só envia a intenção de golpe
@@ -42,8 +41,11 @@ const canAct = computed(
     !showResult.value,
 )
 
-const youModel = computed(() => modelUrlForProfessor(pvp.value?.you?.professor))
-const foeModel = computed(() => modelUrlForProfessor(pvp.value?.foe?.professor))
+// Sprites 2D, não .glb: dois modelos de dezenas de MB por partida faziam o
+// Safari do iPhone descartar a aba no meio da batalha.
+// Ver docs/BUG-BATALHA-TRAVANDO.md.
+const youSprite = computed(() => spriteUrlForProfessor(pvp.value?.you?.professor))
+const foeSprite = computed(() => spriteUrlForProfessor(pvp.value?.foe?.professor))
 
 const resultText = computed(() => {
   const r = pvp.value?.result
@@ -184,28 +186,24 @@ onUnmounted(() => clock && clearInterval(clock))
         :hp="foeHp"
         :max-hp="pvp.foe.maxHp"
       />
-      <model-viewer
+      <img
         class="pvp-arena__model pvp-arena__model--foe"
         :class="{ 'pvp-arena__model--hit': foeHit }"
-        :src="foeModel"
-        camera-controls
-        disable-zoom
-        interaction-prompt="none"
-        shadow-intensity="1"
-      ></model-viewer>
+        :src="foeSprite"
+        :alt="`Prof. ${pvp.foe.professor?.name ?? pvp.opponent.name}`"
+        decoding="async"
+      />
     </div>
 
     <!-- Você (base) -->
     <div class="pvp-arena__you">
-      <model-viewer
+      <img
         class="pvp-arena__model"
         :class="{ 'pvp-arena__model--hit': youHit }"
-        :src="youModel"
-        camera-controls
-        disable-zoom
-        interaction-prompt="none"
-        shadow-intensity="1"
-      ></model-viewer>
+        :src="youSprite"
+        :alt="pvp.you.professor?.name ?? 'Seu professor'"
+        decoding="async"
+      />
       <BattleHpBar :name="pvp.you.professor?.name ?? 'Você'" :hp="youHp" :max-hp="pvp.you.maxHp" />
     </div>
 
@@ -305,12 +303,18 @@ onUnmounted(() => clock && clearInterval(clock))
   max-width: 240px;
   flex: 1;
   min-height: 0;
+  /* `contain` mantém o sprite inteiro no quadro que antes era do model-viewer,
+     sem esticar a arte quando a tela é estreita. */
+  object-fit: contain;
+  object-position: bottom center;
   background: transparent;
-  --poster-color: transparent;
+  /* Sombra no lugar da que o model-viewer projetava. */
+  filter: drop-shadow(0 12px 14px rgba(0, 0, 0, 0.45));
 }
 
 .pvp-arena__model--foe {
   align-self: flex-start;
+  object-position: top center;
 }
 
 .pvp-arena__model--hit {
