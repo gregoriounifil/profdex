@@ -40,6 +40,12 @@ export class AdminMetricsController {
     return this.metrics.series(metric, hours);
   }
 
+  /** Total de interações do evento e a composição desse número. */
+  @Get('interactions')
+  interactions() {
+    return this.metrics.interactions();
+  }
+
   @Get('funnel')
   funnel() {
     return this.metrics.funnel();

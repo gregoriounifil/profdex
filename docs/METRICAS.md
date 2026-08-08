@@ -50,26 +50,74 @@ as que ficaram órfãs de um restart do servidor.
 | **Batalha concluída** | **80** |
 | Vitória | +30 |
 | Coleção completa | 200 |
+| Quiz respondido na bancada | 10 |
+| Quiz acertado | +25 |
 
 Definidos em `src/metrics/engagement.ts`.
 
-Dois cuidados embutidos:
+Três cuidados embutidos:
 
 - **Teto diário no tempo** — senão deixar a aba aberta renderia mais que jogar.
 - **Nada pontua duas vezes** — re-escanear o mesmo QR não gera nova captura, e
   o servidor detecta isso antes de pontuar.
+- **O cliente não declara o que vale ponto** — ver a seção seguinte.
 
-### O que o servidor registra sozinho
+### Eventos que só o servidor registra
 
-As ações que valem muitos pontos **não passam pelo cliente**:
+`POST /metrics/events` aceita o que o app mandar, e o app é código rodando no
+celular do aluno. Sem uma barreira, um `fetch` no console valeria 50 pontos de
+"professor capturado" sem sair da cadeira.
+
+Por isso os eventos de valor estão em `SERVER_ONLY_EVENTS` e são **descartados
+em silêncio** quando chegam pela ingestão. Eles nascem no servidor, no momento
+em que o fato acontece:
 
 | Evento | Onde é registrado |
 |---|---|
 | `professor_discovered`, `professor_captured`, `collection_completed` | `captures.service.ts` |
-| `battle_finished`, `battle_won` | `battle-room.service.ts` |
+| `battle_invite_sent`, `battle_started`, `battle_finished`, `battle_won` | `battle-room.service.ts` |
+| `quiz_answered`, `quiz_correct` | `quiz.service.ts` |
 
-O cliente só reporta o que é barato e inofensivo (navegação, telas abertas).
-Um front adulterado não consegue inflar o próprio placar.
+O que o app ainda declara: `screen_view`, `scan_open`, `ranking_viewed`,
+`guide_opened` — volume de navegação, que não pontua. Um front adulterado não
+consegue inflar o próprio placar.
+
+## Total de interações
+
+O número-síntese do evento: **"o app gerou N interações"**. É uma régua
+diferente do `engagementScore` e de propósito — o score compara alunos entre si
+e por isso tem teto; a contagem de interações mede volume de atividade, na
+unidade "curtida de rede social", e a pergunta é quantas delas cada gesto aqui
+equivale.
+
+| Fonte | Interações |
+|---|---|
+| Tela visitada | 1 |
+| Ranking / guia aberto | 1 |
+| Câmera aberta | 2 |
+| Convite de batalha | 2 |
+| Professor descoberto | 5 |
+| Batalha iniciada | 5 |
+| Quiz respondido | 10 |
+| **10 minutos ativos** | **5** |
+| **Professor capturado** | **15** |
+| **Batalha concluída** | **25** (por jogador) |
+| Coleção completa | 50 |
+
+`battle_won` e `quiz_correct` valem 0 aqui: eles são gravados **junto** com o
+evento de conclusão, e contar os dois faria a mesma batalha valer mais para um
+lado do que para o outro.
+
+O total é somado pelo rollup (métrica `interactions`) e o painel só lê o
+agregado. Sai também `interactions_time` sozinha, para a tela mostrar quanto do
+total veio de tempo e não de ação — sem isso o número seria uma caixa preta.
+
+Duas consequências que valem saber ao ler o painel:
+
+- **O tempo só entra quando a sessão fecha.** A parcela de tempo é atribuída à
+  hora do `ended_at`, igual a `active_minutes`. Quem está com o app aberto agora
+  ainda não aparece nessa fatia.
+- **O número anda a cada 5 minutos**, no ritmo do rollup, não em tempo real.
 
 ## Impacto em carga
 
@@ -87,23 +135,33 @@ Métrica não pode competir com o PvP pelo servidor (ver
 
 ## Painel administrativo
 
-`/admin/metricas` — **somente leitura**. Todas as rotas são `GET` e o serviço
-não tem nenhum método de escrita, por desenho: ser administrador dá acesso a
-acompanhar números e **absolutamente nada além do que um aluno pode fazer**.
+A área `/admin` tem navegação própria e duas seções:
+
+| Rota | O que é |
+|---|---|
+| `/admin/metricas` | Este documento — **somente leitura** |
+| `/admin/quiz` | Tentativas do quiz de bancada (ver [QUIZ.md](./QUIZ.md)) |
+| `/admin/quiz/bancada` | Quiosque do quiz, fora do layout do painel |
+
+Em métricas, todas as rotas são `GET` e o serviço não tem nenhum método de
+escrita, por desenho: ser administrador dá acesso a acompanhar números e
+**nada além do que um aluno pode fazer** sobre a conta de ninguém.
 
 Mostra:
 
+- **Total de interações** em destaque, com a quebra por fonte
 - Usuários hoje / na semana, sessões, média por sessão, minutos ativos
-- **Usuários logados por hora** (e outras séries: capturas, batalhas, sessões)
+- **Usuários logados por hora** (e outras séries: interações, capturas,
+  batalhas, sessões)
 - Funil: cadastrados → descobriram → capturaram → batalharam
 - Retenção D1: dos que estrearam ontem, quantos voltaram
 - Ranking de engajamento
 
 ### Quem é administrador
 
-Contas com `users.role = 'admin'`. A intenção final é derivar isso do domínio do
-e-mail institucional (**`@unifil.br` = admin**, `@edu.unifil.br` = aluno) quando
-o login com Google entrar. Até lá, por matrícula:
+Contas com `users.role = 'admin'`, derivado do domínio do e-mail institucional
+no login com Google (**`@unifil.br` = admin**, `@edu.unifil.br` = aluno — ver
+[AUTENTICACAO.md](./AUTENTICACAO.md)). Também dá para ajustar por matrícula:
 
 ```bash
 npm run db:set-admin                       # lista os admins atuais
@@ -131,14 +189,15 @@ request pelo `AdminGuard` — revogar um admin vale na hora.
 | Método | Rota |
 |---|---|
 | GET | `/api/admin/metrics/overview` |
+| GET | `/api/admin/metrics/interactions` — total e composição |
 | GET | `/api/admin/metrics/series?metric=&hours=` |
 | GET | `/api/admin/metrics/funnel` |
 | GET | `/api/admin/metrics/engagement?limit=` |
 | GET | `/api/admin/metrics/retention` |
 
-Métricas de série disponíveis: `logged_users`, `active_users`,
-`sessions_started`, `active_minutes` e `event_<tipo>` (ex.:
-`event_professor_captured`).
+Métricas de série disponíveis: `interactions`, `interactions_time`,
+`logged_users`, `active_users`, `sessions_started`, `active_minutes` e
+`event_<tipo>` (ex.: `event_professor_captured`).
 
 ## Privacidade
 
@@ -168,6 +227,15 @@ Executado em 07/08/2026 contra Postgres 16 e o servidor no ar:
 - Painel recusa aluno (403) e anônimo (401).
 - Sob carga (496 conexões, 260 batalhas), o rollup agregou 458 eventos de
   batalha sem atrasar o PvP — ver [`CARGA-PVP.md`](CARGA-PVP.md).
+
+Em 08/08/2026, para o total de interações:
+
+- Cenário controlado (2 capturas + 1 batalha + 1 tela + 1 quiz + 20min ativos)
+  fechou **exatamente** o esperado: 76 interações, com a quebra por fonte
+  somando o mesmo total e o recorte "hoje" idem.
+- A ingestão **recusou** `professor_captured`, `quiz_correct` e
+  `battle_finished` vindos do cliente autenticado, aceitando só o `screen_view`
+  do mesmo lote.
 
 ## Limitações conhecidas
 

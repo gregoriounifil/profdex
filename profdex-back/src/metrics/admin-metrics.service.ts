@@ -1,5 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  EVENT_TYPES,
+  INTERACTION_SOURCE_LABELS,
+  INTERACTION_WEIGHTS,
+  INTERACTIONS_PER_TIME_BLOCK,
+  TIME_BLOCK_MINUTES,
+} from './engagement';
 
 /** Teto de horas por consulta de série temporal (uma semana). */
 export const MAX_SERIES_HOURS = 24 * 7;
@@ -39,6 +46,7 @@ export class AdminMetricsService {
       activeMsToday,
       capturesToday,
       battlesToday,
+      interacoes,
     ] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.userSession.count({
@@ -57,6 +65,7 @@ export class AdminMetricsService {
       this.prisma.appEvent.count({
         where: { type: 'battle_finished', occurredAt: { gte: startOfDay } },
       }),
+      this.interactionTotals(startOfDay),
     ]);
 
     return {
@@ -64,11 +73,70 @@ export class AdminMetricsService {
       sessionsToday,
       dau,
       wau,
-      activeMinutesToday: Math.round((activeMsToday._sum.activeMs ?? 0) / 60_000),
+      activeMinutesToday: Math.round(
+        (activeMsToday._sum.activeMs ?? 0) / 60_000,
+      ),
       avgSessionMinutes:
         Math.round(((activeMsToday._avg.activeMs ?? 0) / 60_000) * 10) / 10,
       capturesToday,
       battlesToday,
+      interactionsTotal: interacoes.total,
+      interactionsToday: interacoes.hoje,
+    };
+  }
+
+  /**
+   * Total de interações e de onde elas vieram.
+   *
+   * O total é o número de volume do evento — "o app gerou N interações". Vem
+   * pré-somado do rollup; a quebra é reconstruída aqui a partir das contagens
+   * por tipo de evento (`event_<tipo>`) multiplicadas pelo mesmo peso que o
+   * rollup usou, então total e quebra fecham por construção.
+   */
+  async interactions() {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const [totais, agregados] = await Promise.all([
+      this.interactionTotals(startOfDay),
+      this.prisma.$queryRaw<{ metric: string; total: number }[]>`
+        SELECT metric, COALESCE(SUM(value), 0)::int AS total
+        FROM metrics_hourly
+        WHERE metric LIKE 'event_%' OR metric = 'interactions_time'
+        GROUP BY metric
+      `,
+    ]);
+
+    const por = new Map(agregados.map((r) => [r.metric, r.total]));
+
+    const fontes = EVENT_TYPES.filter((t) => INTERACTION_WEIGHTS[t] > 0)
+      .map((tipo) => {
+        const ocorrencias = por.get(`event_${tipo}`) ?? 0;
+        return {
+          fonte: INTERACTION_SOURCE_LABELS[tipo],
+          ocorrencias,
+          peso: INTERACTION_WEIGHTS[tipo],
+          interacoes: ocorrencias * INTERACTION_WEIGHTS[tipo],
+        };
+      })
+      .concat({
+        fonte: `Tempo no app (${TIME_BLOCK_MINUTES}min = ${INTERACTIONS_PER_TIME_BLOCK})`,
+        ocorrencias: 0,
+        peso: INTERACTIONS_PER_TIME_BLOCK,
+        interacoes: por.get('interactions_time') ?? 0,
+      })
+      .filter((f) => f.interacoes > 0)
+      .sort((a, b) => b.interacoes - a.interacoes);
+
+    return {
+      total: totais.total,
+      hoje: totais.hoje,
+      fontes: fontes.map((f) => ({
+        ...f,
+        pct: totais.total
+          ? Math.round((f.interacoes / totais.total) * 1000) / 10
+          : 0,
+      })),
     };
   }
 
@@ -178,6 +246,19 @@ export class AdminMetricsService {
    * linhas: contar o DAU carregaria uma linha por sessão do dia para descartar
    * quase todas em memória.
    */
+  /** Interações acumuladas (tudo) e desde `startOfDay`, numa consulta só. */
+  private async interactionTotals(
+    startOfDay: Date,
+  ): Promise<{ total: number; hoje: number }> {
+    const rows = await this.prisma.$queryRaw<{ total: number; hoje: number }[]>`
+      SELECT COALESCE(SUM(value), 0)::int AS total,
+             COALESCE(SUM(value) FILTER (WHERE bucket >= ${startOfDay}), 0)::int AS hoje
+      FROM metrics_hourly
+      WHERE metric = 'interactions'
+    `;
+    return rows[0] ?? { total: 0, hoje: 0 };
+  }
+
   private async distinctSessionUsers(since: Date): Promise<number> {
     const rows = await this.prisma.$queryRaw<{ total: number }[]>`
       SELECT COUNT(DISTINCT user_id)::int AS total

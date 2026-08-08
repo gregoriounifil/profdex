@@ -63,3 +63,67 @@ export const TIME_POINTS_DAILY_CAP = 60;
 export function pointsFor(type: EventType): number {
   return ENGAGEMENT_POINTS[type];
 }
+
+// ── Interações ──────────────────────────────────────────────────────────────
+//
+// Número único para o relatório do evento: "quantas interações o app gerou?".
+//
+// É uma régua DIFERENTE do `engagementScore`, e de propósito. O score compara
+// alunos entre si e por isso precisa de teto e de peso alto no que é difícil.
+// A contagem de interações mede volume de atividade — a unidade é a curtida de
+// uma rede social, e a pergunta é quantas delas cada gesto aqui equivale.
+//
+// Uma captura exige atravessar o campus até um QR: vale 15. Uma batalha
+// completa consome minutos dos dois jogadores: vale 25 para cada lado. Trocar
+// de tela vale 1, como um clique qualquer.
+
+/** Quantas interações cada evento representa. */
+export const INTERACTION_WEIGHTS: Record<EventType, number> = {
+  screen_view: 1,
+  scan_open: 2,
+  professor_discovered: 5,
+  professor_captured: 15,
+  battle_invite_sent: 2,
+  battle_started: 5,
+  // `battle_won` não pontua: ele é gravado JUNTO com o `battle_finished` do
+  // vencedor, e contar os dois faria a mesma batalha valer mais para um lado.
+  battle_finished: 25,
+  battle_won: 0,
+  ranking_viewed: 1,
+  guide_opened: 1,
+  collection_completed: 50,
+  quiz_answered: 10,
+  quiz_correct: 0, // já contado no quiz_answered
+};
+
+/** Tamanho do bloco de tempo de uso convertido em interações. */
+export const TIME_BLOCK_MINUTES = 10;
+
+/**
+ * Interações creditadas a cada bloco de tempo ATIVO (aba visível).
+ *
+ * Vale pouco por minuto de propósito: tempo aberto é presença, não atividade.
+ * Se pesasse como uma captura, o total mediria quem esqueceu o app aberto.
+ */
+export const INTERACTIONS_PER_TIME_BLOCK = 5;
+
+export function interactionsFor(type: EventType): number {
+  return INTERACTION_WEIGHTS[type];
+}
+
+/** Rótulo de cada fonte de interação no painel. */
+export const INTERACTION_SOURCE_LABELS: Record<EventType, string> = {
+  screen_view: 'Telas visitadas',
+  scan_open: 'Câmera aberta',
+  professor_discovered: 'Professores descobertos',
+  professor_captured: 'Professores capturados',
+  battle_invite_sent: 'Convites de batalha',
+  battle_started: 'Batalhas iniciadas',
+  battle_finished: 'Batalhas concluídas',
+  battle_won: 'Vitórias',
+  ranking_viewed: 'Ranking consultado',
+  guide_opened: 'Guia consultado',
+  collection_completed: 'Coleções completadas',
+  quiz_answered: 'Quiz respondido na bancada',
+  quiz_correct: 'Quiz acertado',
+};

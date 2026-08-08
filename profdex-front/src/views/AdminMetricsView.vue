@@ -1,9 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import api from '../services/api'
-
-const router = useRouter()
 
 const loading = ref(true)
 const error = ref(null)
@@ -12,9 +9,13 @@ const overview = ref(null)
 const funnel = ref([])
 const engagement = ref([])
 const retention = ref(null)
+const interacoes = ref(null)
+
+const numero = (v) => (v ?? 0).toLocaleString('pt-BR')
 
 // Série horária. O seletor troca a métrica sem recarregar o resto do painel.
 const SERIES = [
+  { key: 'interactions', label: 'Interações' },
   { key: 'logged_users', label: 'Usuários logados' },
   { key: 'active_users', label: 'Usuários interagindo' },
   { key: 'sessions_started', label: 'Sessões abertas' },
@@ -43,16 +44,18 @@ async function carregarSerie() {
 
 onMounted(async () => {
   try {
-    const [o, f, e, r] = await Promise.all([
+    const [o, f, e, r, i] = await Promise.all([
       api.get('/admin/metrics/overview'),
       api.get('/admin/metrics/funnel'),
       api.get('/admin/metrics/engagement', { params: { limit: 20 } }),
       api.get('/admin/metrics/retention'),
+      api.get('/admin/metrics/interactions'),
     ])
     overview.value = o.data
     funnel.value = f.data
     engagement.value = e.data
     retention.value = r.data
+    interacoes.value = i.data
     await carregarSerie()
   } catch (e) {
     error.value =
@@ -92,19 +95,37 @@ const labelSerie = computed(
 
 <template>
   <div class="admin">
-    <header class="admin__header">
-      <button class="back-btn" type="button" @click="router.back()">← Voltar</button>
-      <div>
-        <span class="pixel eyebrow">PAINEL</span>
-        <h1 class="pixel admin__title">Métricas</h1>
-      </div>
-    </header>
-
     <main class="admin__main">
       <p v-if="loading" class="hint">Carregando…</p>
       <p v-else-if="error" class="hint hint--error" role="alert">{{ error }}</p>
 
       <template v-else>
+        <!-- Número-síntese do evento: tudo que os alunos fizeram, na mesma
+             régua. A quebra fica logo abaixo para o número não ser opaco. -->
+        <section v-if="interacoes" class="destaque" aria-label="Total de interações">
+          <span class="pixel destaque__rotulo">TOTAL DE INTERAÇÕES</span>
+          <strong class="destaque__valor">{{ numero(interacoes.total) }}</strong>
+          <span class="destaque__hoje">{{ numero(interacoes.hoje) }} hoje</span>
+
+          <ul v-if="interacoes.fontes.length" class="fontes">
+            <li v-for="f in interacoes.fontes" :key="f.fonte" class="fonte">
+              <div class="fonte__topo">
+                <span class="fonte__nome">{{ f.fonte }}</span>
+                <span class="fonte__num">{{ numero(f.interacoes) }} · {{ f.pct }}%</span>
+              </div>
+              <div class="fonte__trilho">
+                <div class="fonte__preenchido" :style="{ width: f.pct + '%' }"></div>
+              </div>
+              <span v-if="f.ocorrencias" class="fonte__detalhe">
+                {{ numero(f.ocorrencias) }} × {{ f.peso }}
+              </span>
+            </li>
+          </ul>
+          <p v-else class="hint">
+            Ainda sem interações agregadas — o rollup roda a cada 5 minutos.
+          </p>
+        </section>
+
         <!-- Números do dia -->
         <section class="cards" aria-label="Resumo de hoje">
           <div class="card">
@@ -225,45 +246,12 @@ const labelSerie = computed(
   flex-direction: column;
 }
 
-.admin__header {
-  background: linear-gradient(160deg, var(--red-dark), var(--red));
-  padding: 18px 20px 24px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-shrink: 0;
-}
-
-.back-btn {
-  min-height: 38px;
-  padding: 0 14px;
-  border-radius: var(--radius);
-  background: rgba(0, 0, 0, 0.25);
-  color: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  white-space: nowrap;
-}
-
-.eyebrow {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--yellow);
-  font-size: 8px;
-}
-
-.admin__title {
-  font-size: 18px;
-  color: white;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
-}
-
 .admin__main {
   flex: 1;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  overflow-y: auto;
 }
 
 .hint {
@@ -275,6 +263,84 @@ const labelSerie = computed(
 
 .hint--error {
   color: var(--red-light);
+}
+
+/* Destaque de interações */
+.destaque {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 18px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--yellow);
+}
+
+.destaque__rotulo {
+  font-size: 9px;
+  color: var(--yellow);
+}
+
+.destaque__valor {
+  font-size: 40px;
+  line-height: 1.1;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.destaque__hoje {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.fontes {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  width: 100%;
+  display: grid;
+  gap: 10px;
+}
+
+.fonte {
+  display: grid;
+  gap: 3px;
+}
+
+.fonte__topo {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.fonte__nome {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fonte__num {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.fonte__trilho {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+
+.fonte__preenchido {
+  height: 100%;
+  background: linear-gradient(90deg, var(--yellow), var(--red));
+}
+
+.fonte__detalhe {
+  font-size: 10px;
+  color: var(--text-muted);
 }
 
 /* Cartões do topo */

@@ -6,6 +6,11 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  INTERACTION_WEIGHTS,
+  INTERACTIONS_PER_TIME_BLOCK,
+  TIME_BLOCK_MINUTES,
+} from './engagement';
 
 /** Com que frequência recalculamos os agregados. */
 const ROLLUP_INTERVAL_MS = 5 * 60_000;
@@ -66,6 +71,7 @@ export class RollupService implements OnModuleInit, OnModuleDestroy {
         ...(await this.activeUsers(from)),
         ...(await this.activeMinutes(from)),
         ...(await this.eventCounts(from)),
+        ...(await this.interactions(from)),
       ];
       await this.persist(rows);
     } catch (error) {
@@ -148,6 +154,56 @@ export class RollupService implements OnModuleInit, OnModuleDestroy {
       FROM app_events
       WHERE occurred_at >= ${from}
       GROUP BY 1, 2
+    `;
+  }
+
+  /**
+   * Interações por hora — o número de volume do evento.
+   *
+   * Duas fontes somadas: os eventos, cada um com seu peso (ver
+   * INTERACTION_WEIGHTS), e o tempo ativo convertido em blocos. Sai também
+   * `interactions_time` sozinha, para o painel conseguir mostrar quanto do
+   * total veio de tempo e não de ação — sem isso o número seria uma caixa
+   * preta.
+   *
+   * As duas séries precisam sair da MESMA consulta: gerar duas linhas
+   * `(bucket, 'interactions')` no mesmo INSERT faria o Postgres recusar o
+   * `ON CONFLICT` ("cannot affect row a second time").
+   */
+  private interactions(from: Date): Promise<Row[]> {
+    const pesos = Prisma.join(
+      Object.entries(INTERACTION_WEIGHTS).map(
+        ([type, peso]) => Prisma.sql`(${type}::text, ${peso}::int)`,
+      ),
+    );
+
+    return this.prisma.$queryRaw<Row[]>`
+      WITH pesos (type, peso) AS (VALUES ${pesos}),
+      eventos AS (
+        SELECT date_trunc('hour', e.occurred_at) AS bucket,
+               SUM(p.peso)::int                  AS value
+        FROM app_events e
+        JOIN pesos p ON p.type = e.type
+        WHERE e.occurred_at >= ${from}
+        GROUP BY 1
+      ),
+      tempo AS (
+        SELECT date_trunc('hour', s.ended_at) AS bucket,
+               ROUND(
+                 SUM(s.active_ms) / 60000.0
+                 / ${TIME_BLOCK_MINUTES}::numeric
+                 * ${INTERACTIONS_PER_TIME_BLOCK}::numeric
+               )::int AS value
+        FROM user_sessions s
+        WHERE s.ended_at >= ${from}
+        GROUP BY 1
+      )
+      SELECT bucket, 'interactions_time'::text AS metric, value
+      FROM tempo
+      UNION ALL
+      SELECT bucket, 'interactions'::text AS metric, SUM(value)::int AS value
+      FROM (SELECT * FROM eventos UNION ALL SELECT * FROM tempo) AS todas
+      GROUP BY bucket
     `;
   }
 
