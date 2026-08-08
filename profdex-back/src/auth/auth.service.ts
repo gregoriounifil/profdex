@@ -1,16 +1,24 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 // Nativo, não `bcryptjs` — ver a nota em users.service.ts e docs/CARGA-PVP.md.
 import * as bcrypt from '@node-rs/bcrypt';
 import { UsersService } from '../users/users.service';
+import { isDevSignupEnabled } from './dev-signup';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 
 /**
  * Sessão por matrícula/senha.
  *
- * Não há criação de conta aqui de propósito: a única porta de entrada é o
- * Google (`GoogleAuthService`), que confirma o e-mail institucional. Este
- * serviço só autentica quem já existe.
+ * Em produção este serviço só autentica quem já existe: a única porta de
+ * entrada é o Google (`GoogleAuthService`), que confirma o e-mail
+ * institucional. `registerForDevelopment` abre uma exceção com
+ * `NODE_ENV=development` — ver `dev-signup.ts`.
  */
 @Injectable()
 export class AuthService {
@@ -18,6 +26,21 @@ export class AuthService {
     private users: UsersService,
     private jwt: JwtService,
   ) {}
+
+  /** Cadastro direto. Só existe em desenvolvimento — ver `dev-signup.ts`. */
+  async registerForDevelopment(dto: RegisterDto) {
+    if (!isDevSignupEnabled(process.env)) {
+      throw new ForbiddenException('Cadastro direto indisponível');
+    }
+    const existing = await this.users.findByMatricula(dto.matricula);
+    if (existing) throw new ConflictException('Matrícula já cadastrada');
+    const user = await this.users.createForDevelopment(
+      dto.matricula,
+      dto.name,
+      dto.password,
+    );
+    return this.sign(user.id, user.matricula, user.name, user.role);
+  }
 
   async login(dto: LoginDto) {
     const user = await this.users.findByMatricula(dto.matricula);

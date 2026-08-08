@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { UnauthorizedException } from '@nestjs/common';
+import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthRateLimitService } from './auth-rate-limit.service';
 import { SESSION_COOKIE_NAME } from './auth-session';
@@ -28,6 +28,7 @@ describe('AuthController', () => {
   function createSubject() {
     const auth = {
       login: jest.fn(),
+      registerForDevelopment: jest.fn(),
     };
     const rateLimit = {
       assertAllowed: jest.fn(),
@@ -98,10 +99,56 @@ describe('AuthController', () => {
     expect(rateLimit.assertAllowed).toHaveBeenCalledWith('127.0.0.1:123');
   });
 
-  // Cadastro é exclusivamente pelo Google: uma rota de registro aqui criaria
-  // conta sem e-mail institucional verificado.
-  it('exposes no registration route', () => {
-    expect('register' in AuthController.prototype).toBe(false);
+  // Fora de desenvolvimento o cadastro é exclusivamente pelo Google: a rota de
+  // registro criaria conta sem e-mail institucional verificado.
+  describe('POST /auth/register', () => {
+    const nodeEnv = process.env.NODE_ENV;
+
+    afterEach(() => {
+      process.env.NODE_ENV = nodeEnv;
+    });
+
+    // 404 e não 403: a rota não deve nem admitir que existe. E NODE_ENV
+    // indefinido — o padrão de `nest start` — precisa cair aqui também.
+    it.each([undefined, 'production', 'test'])(
+      'responds 404 with NODE_ENV=%s',
+      (env) => {
+        const { auth, controller, rateLimit, request, response } =
+          createSubject();
+        if (env === undefined) delete process.env.NODE_ENV;
+        else process.env.NODE_ENV = env;
+
+        expect(() =>
+          controller.register(
+            { matricula: '123', name: 'Player', password: 'valid password' },
+            request,
+            response as unknown as Response,
+          ),
+        ).toThrow(NotFoundException);
+        expect(auth.registerForDevelopment).not.toHaveBeenCalled();
+        expect(rateLimit.assertAllowed).not.toHaveBeenCalled();
+      },
+    );
+
+    it('applies the same rate limit as login in development', async () => {
+      const { auth, controller, rateLimit, request, response } =
+        createSubject();
+      process.env.NODE_ENV = 'development';
+      auth.registerForDevelopment.mockResolvedValue({
+        accessToken: 'signed.jwt',
+        user,
+      });
+
+      const result = await controller.register(
+        { matricula: '123', name: 'Player', password: 'valid password' },
+        request,
+        response as unknown as Response,
+      );
+
+      expect(rateLimit.assertAllowed).toHaveBeenCalledWith('127.0.0.1:123');
+      expect(response.cookie).toHaveBeenCalled();
+      expect(JSON.stringify(result)).not.toContain('signed.jwt');
+    });
   });
 
   it('returns the authenticated principal and clears logout cookies', () => {

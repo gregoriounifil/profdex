@@ -14,10 +14,11 @@ definidos na tela de conclusão — a conta entra pelos **dois** caminhos:
 Tudo o que este documento descreve é gratuito: o OAuth do Google não cobra, e o
 envio de e-mail cabe no plano gratuito do Resend.
 
-> **Não há `POST /auth/register`, nem `AuthService.register`, nem
-> `UsersService.create`.** A remoção é coberta por teste em cada uma das três
-> camadas — um cadastro paralelo seria um jeito de entrar no app sem e-mail
-> institucional verificado, que é justamente o que o evento não quer.
+> **Em produção não há cadastro por matrícula/senha.** `POST /auth/register`
+> responde 404, e as três camadas por trás dele recusam. Um cadastro paralelo
+> seria um jeito de entrar no app sem e-mail institucional verificado, que é
+> justamente o que o evento não quer. A exceção de desenvolvimento está descrita
+> em [Cadastro direto](#cadastro-direto-só-em-desenvolvimento).
 
 ## Identidade
 
@@ -86,6 +87,51 @@ administrador.
 Quem já tinha conta por matrícula/senha e entra pelo Google com o mesmo e-mail
 tem as contas **vinculadas** (o `googleId` é gravado). Não vira conta duplicada.
 
+## Cadastro direto (só em desenvolvimento)
+
+O fluxo OAuth **não funciona fora de `localhost`**: o Google recusa cadastrar
+URIs de redirecionamento com IP cru — só o loopback é exceção — e exige HTTPS
+fora dele. Abrir o app pelo IP da rede (`vite --host`) para testar no tablet
+deixaria o login com Google inacessível, e a alternativa seria montar um túnel
+HTTPS só para isso.
+
+Por isso, com **`NODE_ENV=development`**, volta a existir:
+
+| Camada | O que reabre |
+|---|---|
+| `POST /api/auth/register` | Cadastro por matrícula + nome + senha |
+| `AuthService.registerForDevelopment` | Verifica duplicidade e assina a sessão |
+| `UsersService.createForDevelopment` | Cria a conta com a senha em bcrypt |
+| `/register` no front | A tela de cadastro, linkada como `[dev]` no login |
+
+Quatro decisões que mantêm isso seguro:
+
+1. **O portão compara por igualdade com `"development"`**, nunca "diferente de
+   production". Com `nest start` o `NODE_ENV` vem **indefinido**, e um portão
+   escrito ao contrário abriria o cadastro em qualquer ambiente que esquecesse
+   de declarar a variável. Falha fechado: se o cadastro não aparecer
+   localmente, falta `NODE_ENV=development` no `.env`.
+2. **O portão é repetido nas três camadas.** O controller decide o 404, mas o
+   serviço e o `UsersService` recusam por conta própria — são eles que de fato
+   criam conta sem e-mail verificado, e não devem depender de quem os chama.
+3. **Responde 404, não 403.** Fora de desenvolvimento a rota não admite que
+   existe.
+4. **No front o corte é em tempo de build** (`import.meta.env.DEV`): a
+   `RegisterView` não entra no bundle de produção — verificável procurando o
+   markup dela em `dist/` depois de um `npm run build`.
+
+O servidor ainda avisa no boot quando o cadastro está aberto:
+
+```
+[dev] POST /api/auth/register ATIVO — cadastro por matrícula/senha sem
+verificação de e-mail institucional.
+```
+
+Se essa linha aparecer num log de produção, o `NODE_ENV` está errado.
+
+O cadastro direto passa pelo **mesmo rate limit** do login (IP + matrícula) —
+sem isso ele seria uma porta lateral para tentar senha sem contar tentativa.
+
 ## Redefinição de senha
 
 ```
@@ -126,6 +172,7 @@ Ver `.env.example`. Resumo:
 | `GOOGLE_CLIENT_ID` / `_SECRET` / `_CALLBACK_URL` | App sobe normal; rotas `/auth/google` não existem |
 | `APP_URL` | Assume `http://localhost:5173` |
 | `RESEND_API_KEY` | E-mails vão para o log em vez de serem enviados |
+| `NODE_ENV=development` | Sem ela o cadastro direto some (404) — que é o correto em produção |
 
 Credenciais do Google: console.cloud.google.com → APIs e Serviços →
 Credenciais → ID do cliente OAuth → Aplicativo da Web. Cadastre o

@@ -9,8 +9,15 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!user.value)
 
-  // Não há `register`: contas nascem no login com Google e são concluídas em
+  // Em produção contas nascem no login com Google e são concluídas em
   // /completar-cadastro (POST /auth/google/complete), que já devolve a sessão.
+  // `register` só serve ao ambiente de desenvolvimento: o backend responde 404
+  // sem `NODE_ENV=development`, e a rota /register nem existe no build.
+  async function register(matricula, name, password) {
+    const { data } = await api.post('/auth/register', { matricula, name, password })
+    setSession(data)
+  }
+
   async function login(matricula, password) {
     const { data } = await api.post('/auth/login', { matricula, password })
     setSession(data)
@@ -51,5 +58,5 @@ export const useAuthStore = defineStore('auth', () => {
 
   window.addEventListener('auth:expired', expireSession)
 
-  return { user, isAuthenticated, login, logout, restoreSession }
+  return { user, isAuthenticated, register, login, logout, restoreSession }
 })

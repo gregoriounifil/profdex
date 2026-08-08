@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  NotFoundException,
   Post,
   Req,
   Res,
@@ -15,12 +16,14 @@ import type { Request, Response } from 'express';
 import { AuthRateLimitService } from './auth-rate-limit.service';
 import { getSessionCookieOptions, SESSION_COOKIE_NAME } from './auth-session';
 import { AuthService } from './auth.service';
+import { isDevSignupEnabled } from './dev-signup';
 import {
   CompleteGoogleSignupDto,
   ForgotPasswordDto,
   ResetPasswordDto,
 } from './dto/google.dto';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 import { GoogleAuthService } from './google-auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { PasswordResetService } from './password-reset.service';
@@ -43,23 +46,62 @@ export class AuthController {
   }
 
   /**
-   * Entrada por matrícula/senha. **Não cria conta** — não existe rota de
-   * cadastro: toda conta nasce do login com Google (`/auth/google`), que é o
-   * que comprova o vínculo institucional. A senha definida ali serve
-   * justamente para poder entrar por aqui depois, sem depender do Google.
+   * Cadastro por matrícula/nome/senha — **só com `NODE_ENV=development`**.
+   *
+   * Fora de desenvolvimento responde 404, e não 403: a rota não deve nem
+   * admitir que existe. O portão é repetido no serviço e no `UsersService`, que
+   * são as camadas que de fato criam a conta sem e-mail institucional
+   * verificado. Ver `dev-signup.ts` e docs/AUTENTICACAO.md.
+   */
+  @Post('register')
+  register(
+    @Body() dto: RegisterDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    if (!isDevSignupEnabled(process.env)) throw new NotFoundException();
+    return this.authenticate(request, response, dto.matricula, () =>
+      this.auth.registerForDevelopment(dto),
+    );
+  }
+
+  /**
+   * Entrada por matrícula/senha. **Não cria conta**: em produção toda conta
+   * nasce do login com Google (`/auth/google`), que é o que comprova o vínculo
+   * institucional. A senha definida ali serve justamente para poder entrar por
+   * aqui depois, sem depender do Google.
    */
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(
+  login(
     @Body() dto: LoginDto,
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const key = `${request.ip}:${dto.matricula.trim().toLowerCase()}`;
+    return this.authenticate(request, response, dto.matricula, () =>
+      this.auth.login(dto),
+    );
+  }
+
+  /**
+   * Rate limit por IP+matrícula em volta de qualquer caminho que devolva
+   * sessão: sem isso o cadastro seria uma porta lateral para adivinhar senha
+   * sem contar tentativa.
+   */
+  private async authenticate(
+    request: Request,
+    response: Response,
+    matricula: string,
+    action: () => Promise<{
+      accessToken: string;
+      user: { id: string; matricula: string; name: string };
+    }>,
+  ) {
+    const key = `${request.ip}:${matricula.trim().toLowerCase()}`;
     this.rateLimit.assertAllowed(key);
 
     try {
-      const session = await this.auth.login(dto);
+      const session = await action();
       this.rateLimit.reset(key);
       response.cookie(
         SESSION_COOKIE_NAME,

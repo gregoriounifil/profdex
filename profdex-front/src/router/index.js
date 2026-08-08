@@ -40,11 +40,22 @@ const router = createRouter({
       meta: { guest: true },
     },
     {
-      // Cadastro saiu do app: quem não tem conta entra por /auth/google e cai
-      // em /completar-cadastro. Mantido como redirect porque links e atalhos
-      // antigos para /register ainda circulam.
+      // Em produção o cadastro é só pelo Google: quem não tem conta entra por
+      // /auth/google e cai em /completar-cadastro. A rota continua existindo
+      // como redirect porque links e atalhos antigos para /register circulam.
+      //
+      // Em desenvolvimento ela volta a ser a tela de cadastro, para testar o
+      // app fora de `localhost` (onde o OAuth do Google não roda) sem depender
+      // de túnel. `import.meta.env.DEV` é resolvido em tempo de build: no bundle
+      // de produção a RegisterView nem entra no chunk.
       path: '/register',
-      redirect: { name: 'login' },
+      ...(import.meta.env.DEV
+        ? {
+            name: 'register',
+            component: () => import('../views/RegisterView.vue'),
+            meta: { guest: true },
+          }
+        : { redirect: { name: 'login' } }),
     },
     {
       path: '/profdex',
