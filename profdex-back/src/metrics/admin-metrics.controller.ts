@@ -6,9 +6,9 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { AdminGuard } from '../auth/guards/admin.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminMetricsService } from './admin-metrics.service';
-import { AdminGuard } from './guards/admin.guard';
 
 /**
  * Painel administrativo — SOMENTE LEITURA.

@@ -16,7 +16,12 @@ npm install
 cp .env.example .env    # preencha os valores
 npx prisma migrate deploy
 npm run db:seed         # professores iniciais
+npm run db:seed-quiz    # 90 questões do quiz de bancada
 ```
+
+> **Cadastro é só pelo Google.** Não existe `POST /auth/register`: a conta nasce
+> em `/auth/google` e é concluída com matrícula, nome e senha — que passam a
+> valer para o login normal. Ver [`docs/AUTENTICACAO.md`](../docs/AUTENTICACAO.md).
 
 ### Banco local via Docker
 
@@ -98,6 +103,7 @@ npm run db:reset-ranking -- --yes                     # zera ranking e batalhas
 npm run db:reset-ranking -- --yes --purge-test-users  # + remove contas de teste
 npm run db:set-admin                                  # lista administradores
 npm run db:set-admin -- 202312345                     # promove a admin
+npm run db:seed-quiz                                  # questões do quiz
 npm run qr:generate                                   # QR codes de captura
 ```
 
@@ -110,6 +116,8 @@ pontuação zerada.
 - [`docs/BATALHA-PVP.md`](../docs/BATALHA-PVP.md) — regras do PvP, Elo, tiers
 - [`docs/CARGA-PVP.md`](../docs/CARGA-PVP.md) — análise de carga do multiplayer
 - [`docs/METRICAS.md`](../docs/METRICAS.md) — métricas de uso e painel admin
+- [`docs/QUIZ.md`](../docs/QUIZ.md) — quiz de bancada do evento
 - [`docs/AUTENTICACAO.md`](../docs/AUTENTICACAO.md) — login Google, papéis e reset de senha
+- [`docs/BUG-BATALHA-TRAVANDO.md`](../docs/BUG-BATALHA-TRAVANDO.md) — travamento da arena no iOS
 - [`docs/GUIA-TIPOS.md`](../docs/GUIA-TIPOS.md) — tipos e efetividade
 - [`docs/HANDOFF-DEPLOY-RAILWAY-VERCEL.md`](../docs/HANDOFF-DEPLOY-RAILWAY-VERCEL.md) — deploy

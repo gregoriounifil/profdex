@@ -413,7 +413,8 @@ function goBack() {
           <span class="pixel option-label">Instruções de Batalha</span>
         </button>
 
-        <!-- Só para contas administrativas (@unifil.br). Somente leitura. -->
+        <!-- Só para contas administrativas (@unifil.br): métricas (leitura) e
+             a bancada do quiz do evento. -->
         <button
           v-if="auth.user?.role === 'admin'"
           class="battle-option battle-option--admin"
@@ -421,7 +422,7 @@ function goBack() {
           @click="router.push({ name: 'admin-metricas' })"
         >
           <span class="option-icon">📊</span>
-          <span class="pixel option-label">Painel de Métricas</span>
+          <span class="pixel option-label">Painel Administrativo</span>
         </button>
       </section>
     </main>

@@ -21,9 +21,9 @@ model User {
   // `email` fica único para uma conta institucional não virar duas; `googleId`
   // é o identificador estável do Google (o e-mail pode ser renomeado).
   // Só e-mails @edu.unifil.br e @unifil.br entram — ver institutional-domains.ts
-  email         String?             @unique
-  googleId      String?             @unique @map("google_id")
-  emailVerified Boolean             @default(false) @map("email_verified")
+  email         String?              @unique
+  googleId      String?              @unique @map("google_id")
+  emailVerified Boolean              @default(false) @map("email_verified")
   resetTokens   PasswordResetToken[]
 
   // PvP ranqueado — Elo com início/piso 1000 (ver docs/BATALHA-PVP.md)
@@ -41,6 +41,10 @@ model User {
   engagementScore Int           @default(0) @map("engagement_score")
   sessions        UserSession[]
   events          AppEvent[]
+
+  // Quiz de bancada (ver docs/QUIZ.md)
+  quizAttempts QuizAttempt[] @relation("QuizAluno")
+  quizOperated QuizAttempt[] @relation("QuizOperador")
 
   @@index([battleRating(sort: Desc)])
   @@index([engagementScore(sort: Desc)])
@@ -100,6 +104,58 @@ model MetricHourly {
   @@unique([bucket, metric])
   @@index([bucket])
   @@map("metrics_hourly")
+}
+
+// Banco de questões do quiz de bancada. `theme` é um id da roda de tipos
+// (ver src/battle/engine/types.ts) — o mesmo que classifica os professores,
+// para o aluno que acerta saber qual professor ir capturar.
+//
+// A resposta certa mora SÓ aqui: o servidor nunca a envia junto com a questão,
+// senão bastaria abrir o DevTools do tablet da bancada.
+model QuizQuestion {
+  id         String        @id @default(uuid())
+  theme      String // logica | calculo | ia-ml | robotica | arquitetura | npi | redes | banco | algoritmos
+  difficulty String // facil | media | dificil
+  prompt     String
+  options    Json // string[] com as alternativas, na ordem de exibição
+  answer     Int // índice da alternativa correta em `options`
+  active     Boolean       @default(true)
+  createdAt  DateTime      @default(now()) @map("created_at")
+  attempts   QuizAttempt[]
+
+  // Uma questão é identificada pelo enunciado: reexecutar o seed atualiza em
+  // vez de duplicar o banco de questões.
+  @@unique([prompt])
+  @@index([theme, difficulty, active])
+  @@map("quiz_questions")
+}
+
+// Tentativa registrada na bancada.
+//
+// Guardada mesmo quando erra ou o tempo estoura — é ela que sustenta o
+// cooldown de 10min por tema e o relatório do painel. `operatorId` é o admin
+// que estava operando o tablet: sem isso não há como auditar nada depois.
+model QuizAttempt {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  questionId  String   @map("question_id")
+  theme       String
+  difficulty  String
+  correct     Boolean
+  answerIndex Int?     @map("answer_index") // null = tempo esgotado sem resposta
+  elapsedMs   Int      @map("elapsed_ms")
+  operatorId  String   @map("operator_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user     User         @relation("QuizAluno", fields: [userId], references: [id])
+  operator User         @relation("QuizOperador", fields: [operatorId], references: [id])
+  question QuizQuestion @relation(fields: [questionId], references: [id])
+
+  // Consulta do cooldown: última tentativa daquele aluno naquele tema.
+  @@index([userId, theme, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([theme, createdAt])
+  @@map("quiz_attempts")
 }
 
 // Token de redefinição de senha.

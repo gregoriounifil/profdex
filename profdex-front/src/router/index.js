@@ -119,13 +119,35 @@ const router = createRouter({
       meta: { guest: true },
     },
     {
-      // Painel de métricas — somente leitura, só para contas @unifil.br.
-      // O `meta.admin` esconde a tela; quem manda de verdade é o AdminGuard
-      // do servidor, que confere o papel no banco a cada request.
-      path: '/admin/metricas',
-      name: 'admin-metricas',
-      component: () => import('../views/AdminMetricsView.vue'),
+      // Bancada do quiz — quiosque para o tablet do estande. Fica FORA do
+      // layout do painel de propósito: a tela é virada para o aluno e não
+      // pode ter navegação administrativa por perto.
+      // Declarada antes de /admin para o caminho mais específico vencer.
+      path: '/admin/quiz/bancada',
+      name: 'admin-quiz-bancada',
+      component: () => import('../views/AdminQuizBoothView.vue'),
       meta: { auth: true, admin: true },
+    },
+    {
+      // Área administrativa — só para contas @unifil.br. O `meta.admin` apenas
+      // esconde as telas; quem manda de verdade é o AdminGuard do servidor,
+      // que confere o papel no banco a cada request.
+      path: '/admin',
+      component: () => import('../views/AdminLayout.vue'),
+      meta: { auth: true, admin: true },
+      children: [
+        { path: '', redirect: { name: 'admin-metricas' } },
+        {
+          path: 'metricas',
+          name: 'admin-metricas',
+          component: () => import('../views/AdminMetricsView.vue'),
+        },
+        {
+          path: 'quiz',
+          name: 'admin-quiz',
+          component: () => import('../views/AdminQuizAttemptsView.vue'),
+        },
+      ],
     },
     {
       // Exemplo/laboratório do TresJS — sem guarda de auth para facilitar testar

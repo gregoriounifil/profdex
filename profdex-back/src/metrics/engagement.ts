@@ -19,6 +19,8 @@ export const EVENT_TYPES = [
   'ranking_viewed',
   'guide_opened',
   'collection_completed',
+  'quiz_answered',
+  'quiz_correct',
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
@@ -42,6 +44,8 @@ export const ENGAGEMENT_POINTS: Record<EventType, number> = {
   ranking_viewed: 0,
   guide_opened: 0,
   collection_completed: 200,
+  quiz_answered: 10, // encarar a bancada já vale, mesmo errando
+  quiz_correct: 25, // somado ao quiz_answered
 };
 
 /** Bônus por iniciar a primeira sessão do dia. */

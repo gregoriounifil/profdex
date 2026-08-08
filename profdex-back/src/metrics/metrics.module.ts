@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
+import { AdminGuard } from '../auth/guards/admin.guard';
 import { AdminMetricsController } from './admin-metrics.controller';
 import { AdminMetricsService } from './admin-metrics.service';
-import { AdminGuard } from './guards/admin.guard';
 import { MetricsController } from './metrics.controller';
 import { MetricsService } from './metrics.service';
 import { RollupService } from './rollup.service';

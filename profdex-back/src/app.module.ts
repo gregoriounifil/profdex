@@ -7,6 +7,7 @@ import { DiscoveriesModule } from './discoveries/discoveries.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProfessorsModule } from './professors/professors.module';
+import { QuizModule } from './quiz/quiz.module';
 import { SeedModule } from './seed/seed.module';
 import { UsersModule } from './users/users.module';
 
@@ -21,6 +22,7 @@ import { UsersModule } from './users/users.module';
     DiscoveriesModule,
     CapturesModule,
     MetricsModule,
+    QuizModule,
     SeedModule,
   ],
 })
