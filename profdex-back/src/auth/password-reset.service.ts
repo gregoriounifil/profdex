@@ -94,7 +94,8 @@ export class PasswordResetService {
     const invalid = new BadRequestException(
       'Link inválido ou expirado. Peça um novo.',
     );
-    if (!record || record.usedAt || record.expiresAt <= new Date()) throw invalid;
+    if (!record || record.usedAt || record.expiresAt <= new Date())
+      throw invalid;
 
     const hashed = await bcrypt.hash(newPassword, 10);
     await this.prisma.$transaction([

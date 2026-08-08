@@ -59,5 +59,4 @@ export function classifyInstitutionalEmail(
 }
 
 /** Mensagem única para qualquer recusa — não revela qual regra falhou. */
-export const NOT_INSTITUTIONAL_MESSAGE =
-  `Use seu e-mail institucional (@${STUDENT_DOMAIN} ou @${ADMIN_DOMAIN}).`;
+export const NOT_INSTITUTIONAL_MESSAGE = `Use seu e-mail institucional (@${STUDENT_DOMAIN} ou @${ADMIN_DOMAIN}).`;

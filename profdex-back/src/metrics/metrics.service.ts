@@ -148,7 +148,9 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
         },
       })
       .catch((error: unknown) =>
-        this.logger.warn(`Falha ao encerrar sessão ${sessionId}: ${String(error)}`),
+        this.logger.warn(
+          `Falha ao encerrar sessão ${sessionId}: ${String(error)}`,
+        ),
       );
   }
 
@@ -193,7 +195,9 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
     this.buffer = [];
 
     if (this.dropped > 0) {
-      this.logger.warn(`${this.dropped} evento(s) descartados por buffer cheio`);
+      this.logger.warn(
+        `${this.dropped} evento(s) descartados por buffer cheio`,
+      );
       this.dropped = 0;
     }
 

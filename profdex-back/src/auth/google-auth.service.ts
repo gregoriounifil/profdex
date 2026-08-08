@@ -24,9 +24,20 @@ interface TicketPayload {
 
 export type GoogleOutcome =
   /** Já existe conta: é só abrir a sessão. */
-  | { kind: 'session'; userId: string; matricula: string; name: string; role: string }
+  | {
+      kind: 'session';
+      userId: string;
+      matricula: string;
+      name: string;
+      role: string;
+    }
   /** Conta nova: o app precisa pedir matrícula, nome e senha. */
-  | { kind: 'onboarding'; ticket: string; email: string; suggestedName: string };
+  | {
+      kind: 'onboarding';
+      ticket: string;
+      email: string;
+      suggestedName: string;
+    };
 
 /**
  * Login com Google, convivendo com matrícula/senha.
@@ -64,7 +75,9 @@ export class GoogleAuthService {
   /** Decide entre entrar direto ou mandar completar o cadastro. */
   async resolve(identity: GoogleIdentity): Promise<GoogleOutcome> {
     const existing = await this.prisma.user.findFirst({
-      where: { OR: [{ googleId: identity.googleId }, { email: identity.email }] },
+      where: {
+        OR: [{ googleId: identity.googleId }, { email: identity.email }],
+      },
       select: {
         id: true,
         matricula: true,
@@ -121,7 +134,9 @@ export class GoogleAuthService {
         select: { id: true },
       }),
       this.prisma.user.findFirst({
-        where: { OR: [{ googleId: payload.googleId }, { email: payload.email }] },
+        where: {
+          OR: [{ googleId: payload.googleId }, { email: payload.email }],
+        },
         select: { id: true },
       }),
     ]);

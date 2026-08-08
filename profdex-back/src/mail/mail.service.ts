@@ -22,7 +22,8 @@ export class MailService {
 
   constructor(config: ConfigService) {
     this.apiKey = config.get<string>('RESEND_API_KEY');
-    this.from = config.get<string>('MAIL_FROM') ?? 'ProfDex <onboarding@resend.dev>';
+    this.from =
+      config.get<string>('MAIL_FROM') ?? 'ProfDex <onboarding@resend.dev>';
   }
 
   get isConfigured(): boolean {

@@ -27,11 +27,15 @@ export class CapturesService {
         // re-escanear o mesmo QR não pode pontuar de novo.
         const [descobertaExistente, capturaExistente] = await Promise.all([
           transaction.discovery.findUnique({
-            where: { userId_professorId: { userId, professorId: professor.id } },
+            where: {
+              userId_professorId: { userId, professorId: professor.id },
+            },
             select: { id: true },
           }),
           transaction.capture.findUnique({
-            where: { userId_professorId: { userId, professorId: professor.id } },
+            where: {
+              userId_professorId: { userId, professorId: professor.id },
+            },
             select: { id: true },
           }),
         ]);
@@ -78,7 +82,10 @@ export class CapturesService {
   private async registrarMetricas(
     userId: string,
     professorId: string,
-    { novaDescoberta, novaCaptura }: { novaDescoberta: boolean; novaCaptura: boolean },
+    {
+      novaDescoberta,
+      novaCaptura,
+    }: { novaDescoberta: boolean; novaCaptura: boolean },
   ): Promise<void> {
     try {
       const occurredAt = new Date();

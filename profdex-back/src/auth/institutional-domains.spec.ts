@@ -6,11 +6,13 @@ import {
 
 describe('classifyInstitutionalEmail', () => {
   it('classifies a student address', () => {
-    expect(classifyInstitutionalEmail(`aluno@${STUDENT_DOMAIN}`, true)).toEqual({
-      email: `aluno@${STUDENT_DOMAIN}`,
-      domain: STUDENT_DOMAIN,
-      role: 'aluno',
-    });
+    expect(classifyInstitutionalEmail(`aluno@${STUDENT_DOMAIN}`, true)).toEqual(
+      {
+        email: `aluno@${STUDENT_DOMAIN}`,
+        domain: STUDENT_DOMAIN,
+        role: 'aluno',
+      },
+    );
   });
 
   it('classifies a staff address as admin', () => {
@@ -24,13 +26,15 @@ describe('classifyInstitutionalEmail', () => {
   it('does not promote students, whose domain also ends in the admin domain', () => {
     // edu.unifil.br termina em unifil.br: se a ordem dos testes invertesse,
     // todo aluno viraria administrador do painel.
-    expect(classifyInstitutionalEmail(`aluno@${STUDENT_DOMAIN}`, true)?.role).toBe(
-      'aluno',
-    );
+    expect(
+      classifyInstitutionalEmail(`aluno@${STUDENT_DOMAIN}`, true)?.role,
+    ).toBe('aluno');
   });
 
   it('rejects an unverified address even on an institutional domain', () => {
-    expect(classifyInstitutionalEmail(`aluno@${STUDENT_DOMAIN}`, false)).toBeNull();
+    expect(
+      classifyInstitutionalEmail(`aluno@${STUDENT_DOMAIN}`, false),
+    ).toBeNull();
   });
 
   it('rejects look-alike domains that merely contain the institutional one', () => {

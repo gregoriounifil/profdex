@@ -35,7 +35,10 @@ describe('CapturesService', () => {
         findUnique: jest.fn().mockResolvedValue(null),
       },
     };
-    const service = new CapturesService(prisma as unknown as PrismaService, metricsStub());
+    const service = new CapturesService(
+      prisma as unknown as PrismaService,
+      metricsStub(),
+    );
 
     await expect(service.captureByToken('user-1', token)).rejects.toThrow(
       NotFoundException,
@@ -117,8 +120,9 @@ describe('CapturesService', () => {
     >();
     const transaction = {
       discovery: {
-        findUnique: jest.fn(({ where }: UpsertArguments) =>
-          discoveries.get(JSON.stringify(where.userId_professorId)) ?? null,
+        findUnique: jest.fn(
+          ({ where }: UpsertArguments) =>
+            discoveries.get(JSON.stringify(where.userId_professorId)) ?? null,
         ),
         upsert: jest.fn(({ where }: UpsertArguments) => {
           const key = JSON.stringify(where.userId_professorId);
@@ -178,7 +182,10 @@ describe('CapturesService', () => {
         findMany: jest.fn().mockResolvedValue(records),
       },
     };
-    const service = new CapturesService(prisma as unknown as PrismaService, metricsStub());
+    const service = new CapturesService(
+      prisma as unknown as PrismaService,
+      metricsStub(),
+    );
 
     await expect(service.findAll('user-1')).resolves.toEqual(records);
     expect(prisma.capture.findMany).toHaveBeenCalledWith({
