@@ -31,6 +31,32 @@ export function isEventType(value: string): value is EventType {
   return EVENT_TYPE_SET.has(value);
 }
 
+/**
+ * Eventos que só o SERVIDOR registra.
+ *
+ * A ingestão (`POST /metrics/events`) aceita qualquer tipo que o app mandar —
+ * sem esta lista, um aluno com o DevTools aberto forjaria capturas e batalhas
+ * e lideraria o ranking de engajamento sem sair da cadeira. Estes eventos
+ * nascem de fatos que o servidor conhece: a captura validada, o fim da
+ * batalha, a resposta do quiz na bancada.
+ */
+const SERVER_ONLY_EVENTS: ReadonlySet<EventType> = new Set([
+  'professor_discovered',
+  'professor_captured',
+  'battle_invite_sent',
+  'battle_started',
+  'battle_finished',
+  'battle_won',
+  'collection_completed',
+  'quiz_answered',
+  'quiz_correct',
+]);
+
+/** O app pode declarar este evento? */
+export function isClientReportable(type: EventType): boolean {
+  return !SERVER_ONLY_EVENTS.has(type);
+}
+
 /** Pontos por evento. Zero = registrado para análise, mas não pontua. */
 export const ENGAGEMENT_POINTS: Record<EventType, number> = {
   screen_view: 0, // volume alto demais para pontuar; serve para navegação

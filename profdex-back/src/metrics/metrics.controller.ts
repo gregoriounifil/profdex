@@ -12,7 +12,7 @@ import { Prisma } from '@prisma/client';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { EndSessionDto, HeartbeatDto, TrackEventsDto } from './dto/metrics.dto';
-import { isEventType } from './engagement';
+import { isClientReportable, isEventType } from './engagement';
 import { MetricsService } from './metrics.service';
 
 interface AuthedRequest extends Request {
@@ -70,6 +70,11 @@ export class MetricsController {
    * Lote de interações. Tipos desconhecidos são ignorados em silêncio em vez de
    * derrubar o lote inteiro: um cliente numa versão mais nova que o servidor
    * não pode fazer o aluno perder o resto das métricas.
+   *
+   * Eventos de alto valor (captura, batalha, quiz) também são ignorados aqui —
+   * quem os registra é o servidor, no momento em que o fato acontece. Aceitá-los
+   * do cliente seria entregar o ranking de engajamento a quem sabe abrir o
+   * DevTools.
    */
   @Post('events')
   @HttpCode(HttpStatus.ACCEPTED)
@@ -77,6 +82,7 @@ export class MetricsController {
     const valid: Parameters<MetricsService['record']>[2] = [];
     for (const event of dto.events) {
       if (!isEventType(event.type)) continue;
+      if (!isClientReportable(event.type)) continue;
       valid.push({
         type: event.type,
         occurredAt: new Date(event.occurredAt),
