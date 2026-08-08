@@ -141,9 +141,7 @@ mantém o banco de teste enxuto.
 O harness precisa de um Postgres. Se não houver um à mão:
 
 ```bash
-docker run -d --name profdex-pg \
-  -e POSTGRES_PASSWORD=profdex -e POSTGRES_USER=profdex -e POSTGRES_DB=profdex \
-  -p 55432:5432 postgres:16-alpine
+npm run db:up    # docker-compose.yml na raiz do backend
 
 # no .env
 DATABASE_URL="postgresql://profdex:profdex@localhost:55432/profdex"

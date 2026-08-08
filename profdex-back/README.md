@@ -7,7 +7,7 @@ por WebSocket).
 ## Requisitos
 
 - Node.js 20+
-- Um banco **PostgreSQL** (o projeto usa Supabase)
+- Um banco **PostgreSQL** — Supabase (usado no deploy) ou local via Docker
 
 ## Configuração
 
@@ -18,12 +18,32 @@ npx prisma migrate deploy
 npm run db:seed         # professores iniciais
 ```
 
+### Banco local via Docker
+
+Não é preciso Supabase para desenvolver. O [`docker-compose.yml`](docker-compose.yml)
+sobe um Postgres 16 em `localhost:55432` (porta escolhida para não conflitar com
+um Postgres já instalado na máquina):
+
+```bash
+npm run db:up                              # sobe e espera ficar saudável
+# no .env, use as duas linhas comentadas em "Postgres local via Docker":
+#   DATABASE_URL="postgresql://profdex:profdex@localhost:55432/profdex"
+#   DIRECT_URL="postgresql://profdex:profdex@localhost:55432/profdex"
+npx prisma migrate deploy && npm run db:seed
+```
+
+`npm run db:down` para o container preservando os dados; `npm run db:nuke`
+descarta o volume junto (útil para recomeçar do zero).
+
+Como não há pgbouncer aqui, `DATABASE_URL` e `DIRECT_URL` são iguais e sem
+`?pgbouncer=true` — o resto do app não muda, o `schema.prisma` já é PostgreSQL.
+
 ### Variáveis de ambiente
 
 | Variável | Obrigatória | Para que serve |
 |---|---|---|
-| `DATABASE_URL` | ✅ | Conexão usada em runtime (via pgbouncer, porta 6543). |
-| `DIRECT_URL` | ✅ | Conexão direta (porta 5432), usada **só** pelo Prisma Migrate. Sem ela, `prisma validate` falha com `P1012`. |
+| `DATABASE_URL` | ✅ | Conexão usada em runtime (no Supabase, via pgbouncer na porta 6543). |
+| `DIRECT_URL` | ✅ | Conexão direta (porta 5432), usada **só** pelo Prisma Migrate. Sem ela, `prisma validate` falha com `P1012`. Com Postgres local é igual à `DATABASE_URL`. |
 | `JWT_SECRET` | ✅ | Assina o cookie de sessão **e** valida o handshake do WebSocket de batalha. |
 | `CORS_ORIGINS` | ✅ | Origens liberadas no HTTP e no WebSocket, separadas por vírgula. |
 | `PORT` | — | Padrão `3000`. |
