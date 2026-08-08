@@ -1,7 +1,7 @@
 /**
  * Smoke test do PvP contra um servidor de DEV rodando (npm run start:dev).
  *
- * Percorre o fluxo inteiro de verdade, pela rede: registro → lobby → convite →
+ * Percorre o fluxo inteiro de verdade, pela rede: login → lobby → convite →
  * aceite → pick às cegas → turnos até o nocaute → Elo aplicado → ranking →
  * cooldown de 12h bloqueando o rematch.
  *
@@ -12,6 +12,7 @@
  */
 const { io } = require('socket.io-client')
 const { PrismaClient } = require('@prisma/client')
+const bcrypt = require('@node-rs/bcrypt')
 const { requireDatabaseUrl } = require('./db-url')
 
 const API = process.env.SMOKE_API || 'http://localhost:3000/api'
@@ -23,16 +24,35 @@ const ok = (msg) => console.log('OK:', msg)
 
 const prisma = new PrismaClient({ datasources: { db: { url: DB_URL } } })
 
-async function register(name) {
+const SMOKE_PASSWORD = 'senha123456789'
+
+/**
+ * Cria a conta direto no banco e entra por /auth/login.
+ *
+ * Não existe rota de cadastro: toda conta nasce do login com Google, que o
+ * smoke não tem como percorrer sozinho. O que interessa aqui é a sessão — daí
+ * a conta ser semeada no banco e só o login passar pela rede.
+ */
+async function criarConta(name) {
   const matricula = `smoke${Date.now()}${Math.floor(Math.random() * 1000)}`
-  const res = await fetch(`${API}/auth/register`, {
+  const user = await prisma.user.create({
+    data: {
+      matricula,
+      name,
+      password: await bcrypt.hash(SMOKE_PASSWORD, 10),
+      email: `${matricula}@edu.unifil.br`,
+      emailVerified: true,
+    },
+    select: { id: true, matricula: true, name: true },
+  })
+
+  const res = await fetch(`${API}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ matricula, name, password: 'senha123456789' }),
+    body: JSON.stringify({ matricula, password: SMOKE_PASSWORD }),
   })
-  if (res.status !== 201) fail(`register ${name}: HTTP ${res.status}`)
+  if (res.status !== 200) fail(`login ${name}: HTTP ${res.status}`)
   const cookie = (res.headers.get('set-cookie') || '').split(';')[0]
-  const { user } = await res.json()
   return { cookie, user }
 }
 
@@ -54,8 +74,8 @@ async function main() {
   const professors = await prisma.professor.findMany({ take: 2, orderBy: { slug: 'asc' } })
   if (professors.length < 2) fail('banco sem professores — rode o seed antes')
 
-  const a = await register('Smoke Ana')
-  const b = await register('Smoke Bia')
+  const a = await criarConta('Smoke Ana')
+  const b = await criarConta('Smoke Bia')
   await prisma.capture.createMany({
     data: [
       { userId: a.user.id, professorId: professors[0].id },

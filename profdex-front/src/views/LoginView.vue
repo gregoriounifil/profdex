@@ -91,8 +91,9 @@ async function submit() {
         </RouterLink>
       </div>
 
-      <!-- Login institucional. É um link, não fetch: o fluxo OAuth precisa de
-           navegação de verdade até o Google e de volta. -->
+      <!-- Login institucional e ÚNICA porta de cadastro. É um link, não fetch:
+           o fluxo OAuth precisa de navegação de verdade até o Google e de
+           volta. -->
       <div class="auth-divider"><span>ou</span></div>
       <a :href="googleLoginUrl" class="btn-google">
         <span class="btn-google__g">G</span>
@@ -101,8 +102,8 @@ async function submit() {
       <p class="auth-hint">Use seu @edu.unifil.br ou @unifil.br</p>
 
       <div class="auth-footer">
-        <span>Não tem conta?</span>
-        <RouterLink to="/register" class="pk-link">Cadastre-se</RouterLink>
+        Primeira vez? Entre com o e-mail institucional acima — a conta é criada
+        na hora e você escolhe matrícula e senha para as próximas.
       </div>
     </div>
   </div>
@@ -342,13 +343,9 @@ async function submit() {
 /* Rodapé e Links */
 .auth-footer {
   text-align: center;
-  font-size: 9px;
+  font-size: 8px;
   color: var(--text-muted);
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  align-items: center;
-  line-height: 1.4;
+  line-height: 1.7;
 }
 
 .pk-link {

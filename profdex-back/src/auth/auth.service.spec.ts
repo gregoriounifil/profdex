@@ -1,4 +1,4 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from '@node-rs/bcrypt';
 import { UsersService } from '../users/users.service';
@@ -15,7 +15,6 @@ describe('AuthService', () => {
   function createSubject() {
     const users = {
       findByMatricula: jest.fn(),
-      create: jest.fn(),
     };
     const jwt = {
       sign: jest.fn().mockReturnValue('signed.jwt'),
@@ -30,44 +29,9 @@ describe('AuthService', () => {
     };
   }
 
-  it('registers a unique user and signs a short-lived session payload', async () => {
-    const { jwt, service, users } = createSubject();
-    users.findByMatricula.mockResolvedValue(null);
-    users.create.mockResolvedValue(user);
-
-    await expect(
-      service.register({
-        matricula: user.matricula,
-        name: user.name,
-        password: 'valid password',
-      }),
-    ).resolves.toEqual({
-      accessToken: 'signed.jwt',
-      user: {
-        id: user.id,
-        matricula: user.matricula,
-        name: user.name,
-      },
-    });
-    expect(jwt.sign).toHaveBeenCalledWith({
-      sub: user.id,
-      matricula: user.matricula,
-      name: user.name,
-    });
-  });
-
-  it('rejects duplicate registration without creating a user', async () => {
-    const { service, users } = createSubject();
-    users.findByMatricula.mockResolvedValue(user);
-
-    await expect(
-      service.register({
-        matricula: user.matricula,
-        name: user.name,
-        password: 'valid password',
-      }),
-    ).rejects.toThrow(ConflictException);
-    expect(users.create).not.toHaveBeenCalled();
+  // Toda conta nasce do login com Google; este serviço só autentica.
+  it('exposes no registration path', () => {
+    expect('register' in AuthService.prototype).toBe(false);
   });
 
   it('returns the same generic error for missing and invalid credentials', async () => {

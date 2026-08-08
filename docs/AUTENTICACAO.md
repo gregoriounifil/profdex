@@ -1,16 +1,30 @@
 # Autenticação
 
-Três caminhos de entrada convivem: **matrícula + senha** (o original), **login
-com Google institucional** e **redefinição de senha por e-mail**.
+**Toda conta nasce do login com Google institucional.** Não existe rota de
+cadastro: o único caminho é `/auth/google`, e é lá que o vínculo com a
+instituição é comprovado. Depois de criada — com matrícula, nome e senha
+definidos na tela de conclusão — a conta entra pelos **dois** caminhos:
+
+| Entrada | Serve para |
+|---|---|
+| Login com Google | Criar a conta e entrar |
+| Matrícula + senha | Entrar em conta já existente |
+| Redefinição por e-mail | Recuperar o acesso por senha |
 
 Tudo o que este documento descreve é gratuito: o OAuth do Google não cobra, e o
 envio de e-mail cabe no plano gratuito do Resend.
 
+> **Não há `POST /auth/register`, nem `AuthService.register`, nem
+> `UsersService.create`.** A remoção é coberta por teste em cada uma das três
+> camadas — um cadastro paralelo seria um jeito de entrar no app sem e-mail
+> institucional verificado, que é justamente o que o evento não quer.
+
 ## Identidade
 
 A **matrícula** continua sendo a identidade principal do app — é ela que
-aparece no login e liga o aluno ao evento. O Google entra como forma
-**verificada** de comprovar o vínculo institucional, não como substituto.
+aparece no login e liga o aluno ao evento (inclusive na bancada do quiz, ver
+[QUIZ.md](./QUIZ.md)). O Google é a porta de entrada e a prova do vínculo
+institucional.
 
 | Campo | Papel |
 |---|---|

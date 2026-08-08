@@ -11,11 +11,16 @@ import { PasswordResetService } from './password-reset.service';
 // Colaboradores que estes testes não exercitam — só precisam existir para o
 // construtor. Os fluxos do Google e de redefinição têm cobertura própria.
 const googleStub = () =>
-  ({ resolve: jest.fn(), completeSignup: jest.fn() }) as unknown as GoogleAuthService;
+  ({
+    resolve: jest.fn(),
+    completeSignup: jest.fn(),
+  }) as unknown as GoogleAuthService;
 const passwordResetStub = () =>
   ({ request: jest.fn(), reset: jest.fn() }) as unknown as PasswordResetService;
 const configStub = () =>
-  ({ get: jest.fn().mockReturnValue('http://localhost:5173') }) as unknown as ConfigService;
+  ({
+    get: jest.fn().mockReturnValue('http://localhost:5173'),
+  }) as unknown as ConfigService;
 
 describe('AuthController', () => {
   const user = { id: 'user-1', matricula: '123', name: 'Player' };
@@ -23,7 +28,6 @@ describe('AuthController', () => {
   function createSubject() {
     const auth = {
       login: jest.fn(),
-      register: jest.fn(),
     };
     const rateLimit = {
       assertAllowed: jest.fn(),
@@ -81,18 +85,23 @@ describe('AuthController', () => {
     expect(rateLimit.recordFailure).toHaveBeenCalledWith('127.0.0.1:123');
   });
 
-  it('applies the same protection to registration', async () => {
+  it('checks the rate limit before touching the credentials', async () => {
     const { auth, controller, rateLimit, request, response } = createSubject();
-    auth.register.mockResolvedValue({ accessToken: 'signed.jwt', user });
+    auth.login.mockResolvedValue({ accessToken: 'signed.jwt', user });
 
-    await controller.register(
-      { matricula: '123', name: 'Player', password: 'valid password' },
+    await controller.login(
+      { matricula: '123', password: 'valid password' },
       request,
       response as unknown as Response,
     );
 
     expect(rateLimit.assertAllowed).toHaveBeenCalledWith('127.0.0.1:123');
-    expect(response.cookie).toHaveBeenCalled();
+  });
+
+  // Cadastro é exclusivamente pelo Google: uma rota de registro aqui criaria
+  // conta sem e-mail institucional verificado.
+  it('exposes no registration route', () => {
+    expect('register' in AuthController.prototype).toBe(false);
   });
 
   it('returns the authenticated principal and clears logout cookies', () => {

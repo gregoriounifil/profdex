@@ -1,4 +1,3 @@
-import * as bcrypt from '@node-rs/bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from './users.service';
 
@@ -18,32 +17,9 @@ describe('UsersService', () => {
     });
   });
 
-  it('hashes passwords before persistence', async () => {
-    const prisma = {
-      user: {
-        create: jest.fn(
-          ({
-            data,
-          }: {
-            data: { matricula: string; name: string; password: string };
-          }) => ({ id: 'user-1', ...data }),
-        ),
-      },
-    };
-    const service = new UsersService(prisma as unknown as PrismaService);
-
-    const result = await service.create('123', 'Player', 'valid password');
-
-    expect(result.password).not.toBe('valid password');
-    await expect(
-      bcrypt.verify('valid password', result.password),
-    ).resolves.toBe(true);
-    expect(prisma.user.create).toHaveBeenCalledWith({
-      data: {
-        matricula: '123',
-        name: 'Player',
-        password: result.password,
-      },
-    });
+  // Contas nascem só pelo Google (GoogleAuthService.completeSignup). Um criador
+  // aqui reabriria o cadastro sem verificação de e-mail institucional.
+  it('exposes no way to create a user', () => {
+    expect('create' in UsersService.prototype).toBe(false);
   });
 });

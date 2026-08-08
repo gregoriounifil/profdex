@@ -40,10 +40,11 @@ const router = createRouter({
       meta: { guest: true },
     },
     {
+      // Cadastro saiu do app: quem não tem conta entra por /auth/google e cai
+      // em /completar-cadastro. Mantido como redirect porque links e atalhos
+      // antigos para /register ainda circulam.
       path: '/register',
-      name: 'register',
-      component: () => import('../views/RegisterView.vue'),
-      meta: { guest: true },
+      redirect: { name: 'login' },
     },
     {
       path: '/profdex',
