@@ -139,11 +139,14 @@ async function main() {
   }
   ok(`Elo aplicado: vencedor ${winSide.rating ? `+${winSide.rating.delta} → ${winSide.rating.rating} (${winSide.rating.tier})` : 'empate'}`)
 
+  // Confere pelo `me` (posição própria), não pela primeira página: num banco
+  // com histórico, 25 linhas não alcançam quem acabou de entrar no ladder — e
+  // `me` é justamente o que a tela mostra para o jogador.
   const rank = await fetch(`${API}/rankings/battle`, { headers: { cookie: a.cookie } }).then((r) => r.json())
-  if (!rank.entries.some((e) => e.id === a.user.id || e.id === b.user.id)) {
-    fail('jogadores não apareceram no ranking')
+  if (rank.me?.id !== a.user.id || !rank.me.played || rank.me.position < 1) {
+    fail(`ranking não reconheceu o jogador: ${JSON.stringify(rank.me)}`)
   }
-  ok(`ranking respondendo (${rank.total} no ladder)`)
+  ok(`ranking respondendo (${rank.total} no ladder, Ana em ${rank.me.position}º)`)
 
   ack = await command(sockA, 'invite:send', { toUserId: b.user.id })
   if (ack.ok) fail('cooldown não bloqueou o rematch')
